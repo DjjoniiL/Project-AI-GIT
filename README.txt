@@ -143,6 +143,19 @@ https://vibecode.bitrix24.tech/docs/quickstart
 ## Установка и запуск (локально)
 
 ### Требования
-- Node.js 18+
-- npm 8+
+- Node.js 18+ (проверено на v24.18.0)
+- npm 8+ (проверено на 11.16.0)
 - Тестовый портал Битрикс24 с правами администратора
+
+### Структура монорепозитория (npm workspaces)
+- `apps/frontend` — React + TypeScript + Vite, Redux Toolkit, Ant Design.
+- `apps/backend` — Node.js + Express + TypeScript (BFF).
+- `packages/shared-types` — общие TS-типы формы заказа и маппинг на UF_CRM_* поля сделки.
+
+### Команды (из корня репозитория)
+- `npm install` — установить зависимости всех workspace сразу.
+- `npm run dev:frontend` / `npm run dev:backend` — запустить фронтенд/бэкенд в режиме разработки.
+- `npm run build` — собрать все workspace.
+- `npm test` — прогнать тесты всех workspace (Vitest).
+- `npm run lint` — проверить весь монорепозиторий ESLint.
+- Секреты (`VIBE_APP_KEY` и т.д.) — скопировать `.env.example` в `.env` и заполнить, файл `.env` не коммитится.
