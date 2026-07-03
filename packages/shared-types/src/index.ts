@@ -17,7 +17,7 @@ export type CareType = 'durable' | 'gentle';
 
 export type PrintMethod = 'dtf' | 'sublimation' | 'embroidery';
 
-export type PrintZone = 'chest_left' | 'chest_full' | 'sleeve';
+export type PrintZone = 'chest_left' | 'chest_full' | 'sleeve' | 'back';
 
 export type ExtraOption = 'hood' | 'pocket' | 'zip' | 'trim';
 
@@ -38,9 +38,7 @@ export interface OrderFormData {
 
 /**
  * Маппинг полей формы на пользовательские поля сделки Битрикс24 (UF_CRM_*).
- * Список зафиксирован по составу (specification.md, раздел 6). Точные коды полей —
- * плейсхолдеры: реальные UF_CRM_* имена подтверждаются после создания полей на
- * тестовом портале (Этап 0) и должны быть обновлены здесь до реализации Этапа 1.
+ * Коды подтверждены живыми полями, созданными на портале (specification.md, раздел 6).
  */
 export const UF_FIELD_MAP: Record<keyof OrderFormData, string> = {
   productType: 'UF_CRM_PRODUCT_TYPE',
