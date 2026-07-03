@@ -1,0 +1,993 @@
+<!--
+  Макет №6 — добавлена обработка объёмных макетов поверх Макета №5.
+  ФИНАЛЬНАЯ версия — полностью согласована пользователем 2026-07-03
+  ("Макет супер сохраняем все и пушим в гит. Это будет супер финальный макет").
+  См. specification.md, раздел 4.1.
+  Отличия от design/maket-5.html:
+  - Живой предпросмотр PDF в зоне печати: страница PDF реально рендерится в канвас через
+    pdf.js (не заглушка-плашка «PDF») и накладывается на изделие тем же способом, что и
+    .png/.jpg — как для загруженных пользователем PDF-макетов, так и для итогового PDF после
+    AVIF-сжатия (см. пайплайн сжатия ниже). Для .ai/.eps живого превью по-прежнему нет —
+    в браузере нет способа их отрендерить, показывается плашка с расширением.
+  - Лимит в подписи зоны загрузки обновлён на 52 МБ (было 115 МБ — скорректировано по факту
+    разведки живого API VibeCode, см. specification.md разделы 2 и 4).
+  - Новая модалка «Файл больше 52 МБ» для растровых .png/.jpg: две кнопки — «Сжать файл»
+    и «Выбрать другой файл». Пайплайн сжатия (уточнён в тот же день, второй раунд правок):
+    адаптивное AVIF-кодирование на клиенте (WebAssembly) с автоматическим подбором качества
+    под каждый файл, потолок результата — 48 МБ, затем упаковка сжатого изображения в PDF
+    с потолком 52 МБ (запас в 4 МБ — на накладные расходы PDF-обёртки). Именно этот PDF —
+    финальный файл: он идёт в превью, автоматически скачивается на компьютер пользователя
+    и грузится на Диск/в сделку. Решает более ранний риск несовместимости AVIF с печатным
+    оборудованием — PDF читают все. В этом макете пайплайн визуально имитирован (setTimeout,
+    случайные цифры в границах 48/52 МБ), но демо-скачивание — уже настоящий валидный PDF
+    (через jsPDF, который и так подключён для кнопки экспорта бланка заказа).
+  - Для векторных форматов (.pdf/.ai/.eps) больше 52 МБ — отдельное состояние той же модалки
+    без кнопки сжатия: только информационное сообщение и «Выбрать другой файл» (AVIF — растровый
+    кодек, для векторных форматов сжатие не предлагается).
+  - Добавлены две демо-кнопки под зоной загрузки («Демо: большой .jpg» / «Демо: большой .pdf»)
+    для предпросмотра сценария без необходимости реального крупного файла — это временная
+    удобная деталь именно этого HTML-макета, не часть финального интерфейса конструктора.
+  Формат: HTML/CSS/JS-фрагмент для инструмента предпросмотра (mcp__visualize show_widget),
+  использует CSS-переменные хоста и вебфонт иконок Tabler — при открытии файла напрямую
+  в браузере без хост-окружения стили и иконки не подгрузятся.
+  Не часть кода приложения — референс для Этапа 2 (Итерация 3, каркас проекта).
+  Макеты №1-5 сохранены рядом как предыдущие точки отката.
+-->
+<style>
+.swatchBtn,.swatchCustom{transition:box-shadow .1s;position:relative}
+input[type=color]::-webkit-color-swatch-wrapper{padding:0;border-radius:50%;overflow:hidden}
+input[type=color]::-webkit-color-swatch{border:none}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield}
+#submitBtn:hover{background:var(--fill-accent-hover)}
+#dropzone:focus-within{outline:2px solid var(--border-accent);outline-offset:2px}
+.srOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#comment{height:44px !important;min-height:0 !important;max-height:80px;}
+@keyframes lfSpin{to{transform:rotate(360deg);}}
+#lfStateCompressing .ti-loader-2{display:inline-block;animation:lfSpin 1s linear infinite;}
+</style>
+
+<div style="padding:1rem 0;">
+<h2 class="srOnly">Черновой макет конструктора заказов одежды с принтом для встраивания в карточку сделки Битрикс24</h2>
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;padding:10px 14px;background:var(--bg-accent);border-radius:var(--radius);">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <i class="ti ti-external-link" style="font-size:16px;color:var(--text-accent);" aria-hidden="true"></i>
+    <span style="font-size:13px;color:var(--text-accent);">Вкладка в карточке сделки Битрикс24</span>
+  </div>
+  <span style="font-size:13px;font-weight:500;color:var(--text-accent);">Сделка #12345</span>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+
+  <div style="display:flex;flex-direction:column;gap:14px;min-width:0;">
+
+    <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:1rem 1.1rem;">
+      <label for="fabric" style="display:block;font-size:13px;color:var(--text-secondary);margin:0 0 8px;">Ткань</label>
+      <select id="fabric" style="width:100%;margin-bottom:14px;">
+        <option>Футер 2-х нитка, без начёса</option>
+        <option>Футер 2-х нитка, с начёсом</option>
+        <option>Футер 3-х нитка, без начёса</option>
+        <option>Футер 3-х нитка, с начёсом</option>
+      </select>
+      <h3 id="hCare" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0 0 8px;">Уход за материалом</h3>
+      <div id="careGroup" aria-labelledby="hCare" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button type="button" class="careCard" data-care="durable" aria-checked="false" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;">
+          <span style="font-size:13px;">Долговечный</span>
+          <span style="font-size:11px;color:var(--text-muted);">стирка 60°</span>
+        </button>
+        <button type="button" class="careCard" data-care="gentle" aria-checked="true" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-color:var(--border-accent);background:var(--bg-accent);">
+          <span style="font-size:13px;color:var(--text-accent);">Бережный уход</span>
+          <span style="font-size:11px;color:var(--text-accent);">стирка 40°</span>
+        </button>
+      </div>
+      <div id="careAnnounce" aria-live="polite" class="srOnly"></div>
+    </div>
+
+    <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:1rem 1.1rem;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div>
+        <h3 id="hColorBody" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0 0 8px;">Основной цвет</h3>
+        <div class="swatchRow" data-target="body" aria-labelledby="hColorBody" style="display:flex;flex-wrap:wrap;gap:8px;">
+          <button type="button" class="swatchBtn" data-color="#f3c9d3" title="Бледно-розовый" aria-label="Бледно-розовый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#f3c9d3;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#ffffff" title="Белый" aria-label="Белый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#ffffff;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#1a1a1a" title="Чёрный" aria-label="Чёрный" aria-checked="true" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#1a1a1a;border:none;box-shadow:inset 0 0 0 2px var(--border-accent);"><span class="swatchCheck" style="display:flex;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#8a8a8a" title="Серый" aria-label="Серый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#8a8a8a;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#7a1f1f" title="Тёмно-красный" aria-label="Тёмно-красный" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#7a1f1f;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#1f9e96" title="Бирюзовый" aria-label="Бирюзовый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#1f9e96;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#f2c200" title="Ярко-жёлтый" aria-label="Ярко-жёлтый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#f2c200;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <label class="swatchCustom" title="Свой цвет" style="width:24px;height:24px;border-radius:50%;overflow:visible;position:relative;display:inline-block;cursor:pointer;">
+            <span style="position:absolute;top:0;left:0;width:24px;height:24px;border-radius:50%;overflow:hidden;box-shadow:inset 0 0 0 1px var(--border);display:block;">
+              <input type="color" id="colorBodyCustom" aria-label="Свой цвет — основной" value="#9c9c9c" style="width:32px;height:32px;border:none;padding:0;position:absolute;top:-4px;left:-4px;cursor:pointer;">
+              <i class="ti ti-plus" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:10px;color:#fff;pointer-events:none;background:rgba(0,0,0,.35);width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;" aria-hidden="true"></i>
+            </span>
+            <span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;z-index:1;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span>
+          </label>
+        </div>
+      </div>
+      <div>
+        <h3 id="hColorTrim" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0 0 8px;">Цвет отделки</h3>
+        <div class="swatchRow" data-target="trim" aria-labelledby="hColorTrim" style="display:flex;flex-wrap:wrap;gap:8px;">
+          <button type="button" class="swatchBtn" data-color="#f3c9d3" title="Бледно-розовый" aria-label="Бледно-розовый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#f3c9d3;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#ffffff" title="Белый" aria-label="Белый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#ffffff;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#1a1a1a" title="Чёрный" aria-label="Чёрный" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#1a1a1a;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#8a8a8a" title="Серый" aria-label="Серый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#8a8a8a;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#7a1f1f" title="Тёмно-красный" aria-label="Тёмно-красный" aria-checked="true" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#7a1f1f;border:none;box-shadow:inset 0 0 0 2px var(--border-accent);"><span class="swatchCheck" style="display:flex;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#1f9e96" title="Бирюзовый" aria-label="Бирюзовый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#1f9e96;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#f2c200" title="Ярко-жёлтый" aria-label="Ярко-жёлтый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#f2c200;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <label class="swatchCustom" title="Свой цвет" style="width:24px;height:24px;border-radius:50%;overflow:visible;position:relative;display:inline-block;cursor:pointer;">
+            <span style="position:absolute;top:0;left:0;width:24px;height:24px;border-radius:50%;overflow:hidden;box-shadow:inset 0 0 0 1px var(--border);display:block;">
+              <input type="color" id="colorTrimCustom" aria-label="Свой цвет — отделка" value="#9c9c9c" style="width:32px;height:32px;border:none;padding:0;position:absolute;top:-4px;left:-4px;cursor:pointer;">
+              <i class="ti ti-plus" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:10px;color:#fff;pointer-events:none;background:rgba(0,0,0,.35);width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;" aria-hidden="true"></i>
+            </span>
+            <span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;z-index:1;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:1rem 1.1rem;">
+      <h3 id="hOptions" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0 0 8px;">Дополнительные опции</h3>
+      <div role="group" aria-labelledby="hOptions" style="display:flex;flex-wrap:wrap;gap:14px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" id="optHood" checked>Капюшон</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" id="optPocket" checked>Карман</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" id="optZip">Молния</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" id="optTrim" checked>Отделка</label>
+      </div>
+      <p style="font-size:12px;color:var(--text-secondary);margin:8px 0 0;">При выборе кармана и молнии — кармана будет два.</p>
+
+      <div id="sizeModalOverlay" style="display:none;min-height:360px;background:rgba(0,0,0,0.45);border-radius:12px;align-items:center;justify-content:center;padding:20px;margin-top:14px;">
+        <div role="dialog" aria-modal="true" aria-labelledby="sizeModalTitle" style="background:var(--surface-2);border-radius:12px;padding:1.1rem 1.25rem;max-width:360px;width:100%;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <p id="sizeModalTitle" style="font-size:15px;font-weight:500;margin:0;">Таблица размеров</p>
+            <button type="button" id="closeSizeModal" aria-label="Закрыть" style="padding:4px 8px;"><i class="ti ti-x" style="font-size:16px;" aria-hidden="true"></i></button>
+          </div>
+          <table style="width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px;">
+            <thead>
+              <tr>
+                <th style="text-align:left;padding:6px 4px;border-bottom:0.5px solid var(--border);color:var(--text-secondary);font-weight:500;">Размер</th>
+                <th style="text-align:right;padding:6px 4px;border-bottom:0.5px solid var(--border);color:var(--text-secondary);font-weight:500;">Грудь, см</th>
+                <th style="text-align:right;padding:6px 4px;border-bottom:0.5px solid var(--border);color:var(--text-secondary);font-weight:500;">Длина, см</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">S</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">92</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">66</td></tr>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">M</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">96</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">68</td></tr>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">L</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">100</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">70</td></tr>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">XL</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">104</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">72</td></tr>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">2XL</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">108</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">74</td></tr>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">3XL</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">112</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">76</td></tr>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">4XL</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">116</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">78</td></tr>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">5XL</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">120</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">80</td></tr>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">6XL</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">124</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">82</td></tr>
+              <tr><td style="padding:5px 4px;">7XL</td><td style="text-align:right;padding:5px 4px;">128</td><td style="text-align:right;padding:5px 4px;">84</td></tr>
+            </tbody>
+          </table>
+          <p style="font-size:11px;color:var(--text-secondary);margin:10px 0 0;">Замеры приблизительные, для ориентира при выборе размера.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:0.7rem 1.1rem;">
+      <h3 id="hMacet" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0 0 6px;">Макет принта</h3>
+      <label id="dropzone" for="fileInput" style="display:block;border:1.5px dashed var(--border-strong);border-radius:var(--radius);padding:8px 10px;text-align:center;cursor:pointer;">
+        <i class="ti ti-upload" style="font-size:15px;color:var(--text-muted);" aria-hidden="true"></i>
+        <p style="font-size:12px;margin:4px 0 2px;">Перетащите файл или выберите на компьютере</p>
+        <p style="font-size:11px;color:var(--text-secondary);margin:0;">.png, .jpg, .pdf, .ai, .eps — до 52 МБ</p>
+      </label>
+      <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.pdf,.ai,.eps" class="srOnly">
+      <div id="fileList" style="margin-top:6px;display:flex;flex-direction:column;gap:6px;"></div>
+
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+        <button type="button" id="demoLargeRaster" style="font-size:11px;padding:4px 8px;color:var(--text-secondary);">Демо: большой .jpg (150 МБ)</button>
+        <button type="button" id="demoLargeVector" style="font-size:11px;padding:4px 8px;color:var(--text-secondary);">Демо: большой .pdf (80 МБ)</button>
+      </div>
+      <p style="font-size:10px;color:var(--text-muted);margin:4px 0 0;">Кнопки выше — только для предпросмотра сценария в этом макете, не часть финального интерфейса.</p>
+
+      <div id="largeFileModalOverlay" style="display:none;min-height:280px;background:rgba(0,0,0,0.45);border-radius:12px;align-items:center;justify-content:center;padding:20px;margin-top:14px;">
+        <div role="dialog" aria-modal="true" aria-labelledby="largeFileTitle" style="background:var(--surface-2);border-radius:12px;padding:1.1rem 1.25rem;max-width:360px;width:100%;">
+
+          <div id="lfStateChoice">
+            <p id="largeFileTitle" style="font-size:15px;font-weight:500;margin:0 0 8px;">Файл больше 52 МБ</p>
+            <p style="font-size:13px;margin:0 0 4px;">Макет весит <strong id="lfSizeText">150,0 МБ</strong> — это больше лимита загрузки на Диск Битрикс24 (52 МБ).</p>
+            <p style="font-size:13px;color:var(--text-secondary);margin:0 0 14px;">Можно сжать файл прямо в браузере (AVIF) и упаковать в PDF — без потери очереди на печать и без повторной загрузки.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button type="button" id="lfCompressBtn" style="flex:1;min-width:140px;background:var(--fill-accent);color:var(--on-accent);border:none;">Сжать файл</button>
+              <button type="button" id="lfChooseOtherBtn" style="flex:1;min-width:140px;">Выбрать другой файл</button>
+            </div>
+          </div>
+
+          <div id="lfStateCompressing" style="display:none;text-align:center;padding:12px 0;">
+            <i class="ti ti-loader-2" style="font-size:22px;color:var(--text-accent);" aria-hidden="true"></i>
+            <p id="lfCompressingLabel" style="font-size:13px;margin:10px 0 0;">Подбираем степень сжатия AVIF…</p>
+          </div>
+
+          <div id="lfStateSuccess" style="display:none;">
+            <p style="font-size:15px;font-weight:500;margin:0 0 8px;">Готово</p>
+            <p style="font-size:13px;margin:0 0 6px;"><span id="lfFromSize">150,0 МБ</span> → <strong id="lfToSize">44,8 МБ</strong> (AVIF, автоматически подобранное качество).</p>
+            <p style="font-size:13px;margin:0 0 14px;">Упаковано в PDF — <strong id="lfPdfSize">46,1 МБ</strong>. Именно этот PDF-файл добавлен в превью, сохранён на компьютер и уйдёт на Диск/в производство.</p>
+            <button type="button" id="lfDoneBtn" style="width:100%;background:var(--fill-accent);color:var(--on-accent);border:none;">Готово</button>
+          </div>
+
+          <div id="lfStateVector" style="display:none;">
+            <p style="font-size:15px;font-weight:500;margin:0 0 8px;">Файл больше 52 МБ</p>
+            <p style="font-size:13px;margin:0 0 14px;">Макет весит <strong id="lfSizeTextVector">80,0 МБ</strong>. Сжатие доступно только для файлов .png и .jpg — сконвертируйте файл в один из этих форматов или выберите другой файл.</p>
+            <button type="button" id="lfVectorOkBtn" style="width:100%;">Выбрать другой файл</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:1rem 1.1rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <h3 id="hSizes" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0;">Размеры и количество</h3>
+          <button type="button" id="openSizeModal" style="padding:3px 8px;font-size:11px;display:inline-flex;align-items:center;gap:4px;">
+            <i class="ti ti-ruler-2" style="font-size:13px;" aria-hidden="true"></i>Таблица размеров
+          </button>
+        </div>
+        <span id="totalQty" style="font-size:13px;font-weight:500;" aria-live="polite">Итого: 0 шт.</span>
+      </div>
+      <div id="sizeGrid" role="group" aria-labelledby="hSizes" style="display:grid;grid-template-columns:repeat(10,1fr);gap:4px;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-S" style="font-size:11px;color:var(--text-secondary);">S</label><input type="number" min="0" value="0" id="qty-S" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-M" style="font-size:11px;color:var(--text-secondary);">M</label><input type="number" min="0" value="0" id="qty-M" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-L" style="font-size:11px;color:var(--text-secondary);">L</label><input type="number" min="0" value="0" id="qty-L" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-XL" style="font-size:11px;color:var(--text-secondary);">XL</label><input type="number" min="0" value="0" id="qty-XL" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-2XL" style="font-size:11px;color:var(--text-secondary);">2XL</label><input type="number" min="0" value="0" id="qty-2XL" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-3XL" style="font-size:11px;color:var(--text-secondary);">3XL</label><input type="number" min="0" value="0" id="qty-3XL" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-4XL" style="font-size:11px;color:var(--text-secondary);">4XL</label><input type="number" min="0" value="0" id="qty-4XL" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-5XL" style="font-size:11px;color:var(--text-secondary);">5XL</label><input type="number" min="0" value="0" id="qty-5XL" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-6XL" style="font-size:11px;color:var(--text-secondary);">6XL</label><input type="number" min="0" value="0" id="qty-6XL" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-7XL" style="font-size:11px;color:var(--text-secondary);">7XL</label><input type="number" min="0" value="0" id="qty-7XL" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:1rem 1.1rem;">
+      <label for="comment" style="display:block;font-size:13px;color:var(--text-secondary);margin:0 0 6px;">Комментарий</label>
+      <textarea id="comment" rows="2" placeholder="Пожелания по печати, отделке или комплектации" style="width:100%;resize:vertical;font-size:13px;padding:5px 8px;line-height:1.3;"></textarea>
+    </div>
+
+    <button type="button" id="submitBtn" style="width:100%;background:var(--fill-accent);color:var(--on-accent);border:none;">Отправить в сделку</button>
+    <p style="font-size:12px;color:var(--text-secondary);margin:0;">Создаст сделку в Битрикс24 (или обновит текущую) и прикрепит макет.</p>
+
+  </div>
+
+  <div style="position:sticky;top:0;display:flex;flex-direction:column;gap:10px;min-width:0;">
+
+    <div style="background:var(--surface-1);border-radius:12px;padding:16px;">
+      <div id="viewGroup" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+        <button type="button" class="viewCard" data-view="front" aria-checked="true" style="padding:8px 4px;font-size:12px;border-color:var(--border-accent);background:var(--bg-accent);color:var(--text-accent);">Вид спереди</button>
+        <button type="button" class="viewCard" data-view="back" aria-checked="false" style="padding:8px 4px;font-size:12px;">Вид со спины</button>
+      </div>
+      <svg id="preview" viewBox="0 18 240 368" role="img" style="width:100%;height:auto;display:block;transition:opacity .15s;">
+        <title>Схематичное превью изделия</title>
+        <g transform="scale(1,1.36)">
+          <g id="viewFrontGroup">
+            <g id="svgBody" fill="#1a1a1a" stroke="var(--border-strong)" stroke-width="0.8">
+              <path d="M74.5,94 Q75,88 69.2,89.6 L37.8,98.4 Q28,102 29,108 L37.2,172 Q38,178 43.7,176.1 L62.3,169.9 Q68,168 68.5,162 L74.5,94 Z" />
+              <path d="M165.5,94 Q165,88 170.8,89.6 L202.2,98.4 Q212,102 211,108 L202.8,172 Q202,178 196.3,176.1 L177.7,169.9 Q172,168 171.5,162 L165.5,94 Z" />
+              <path d="M81,85 L159,85 Q165,85 165,91 L172,265 Q172,278 159,278 L81,278 Q68,278 68,265 L75,91 Q75,85 81,85 Z" />
+            </g>
+            <g id="printOverlay"></g>
+            <g id="svgTrim" fill="#7a1f1f" stroke="var(--border-strong)" stroke-width="0.8">
+              <path id="elHood" d="M82,85 Q120,18 158,85 Q150,100 120,102 Q90,100 82,85 Z" />
+              <rect id="elPocket" x="95" y="203" width="50" height="34" rx="8" />
+              <rect id="elPocketLeft" x="72" y="213" width="38" height="16" rx="8" style="display:none;" />
+              <rect id="elPocketRight" x="130" y="213" width="38" height="16" rx="8" style="display:none;" />
+              <g id="elZip" style="display:none;">
+                <rect x="118" y="100" width="4" height="160" />
+                <rect x="112" y="258" width="16" height="10" rx="3" />
+              </g>
+              <g id="elTrimDetails">
+                <rect x="28" y="160" width="42" height="16" rx="6" />
+                <rect x="170" y="160" width="42" height="16" rx="6" />
+                <rect x="68" y="262" width="104" height="18" rx="8" />
+                <rect x="103" y="95" width="3" height="45" rx="1.5" />
+                <rect x="134" y="95" width="3" height="45" rx="1.5" />
+                <circle cx="104.5" cy="142" r="3" />
+                <circle cx="135.5" cy="142" r="3" />
+              </g>
+            </g>
+            <g id="printZoneOutline" fill="none" style="stroke:#ffffff;" stroke-dasharray="4 3" stroke-width="1.2">
+              <rect id="zoneOutlineRect" x="80" y="108" width="80" height="95" rx="4" />
+            </g>
+          </g>
+          <g id="viewBackGroup" style="display:none;">
+            <g id="svgBodyBack" fill="#1a1a1a" stroke="var(--border-strong)" stroke-width="0.8">
+              <path d="M74.5,94 Q75,88 69.2,89.6 L37.8,98.4 Q28,102 29,108 L37.2,172 Q38,178 43.7,176.1 L62.3,169.9 Q68,168 68.5,162 L74.5,94 Z" />
+              <path d="M165.5,94 Q165,88 170.8,89.6 L202.2,98.4 Q212,102 211,108 L202.8,172 Q202,178 196.3,176.1 L177.7,169.9 Q172,168 171.5,162 L165.5,94 Z" />
+              <path d="M81,85 L159,85 Q165,85 165,91 L172,265 Q172,278 159,278 L81,278 Q68,278 68,265 L75,91 Q75,85 81,85 Z" />
+            </g>
+            <g id="printOverlayBack"></g>
+            <g id="svgTrimBack" fill="#7a1f1f" stroke="var(--border-strong)" stroke-width="0.8">
+              <path id="elHoodBack" d="M78,82 Q120,15 162,82 Q155,105 120,108 Q85,105 78,82 Z" />
+              <g id="elTrimDetailsBack">
+                <rect x="28" y="160" width="42" height="16" rx="6" />
+                <rect x="170" y="160" width="42" height="16" rx="6" />
+                <rect x="68" y="262" width="104" height="18" rx="8" />
+              </g>
+            </g>
+            <g id="printZoneOutlineBack" fill="none" style="stroke:#ffffff;" stroke-dasharray="4 3" stroke-width="1.2">
+              <rect id="zoneOutlineRectBack" x="80" y="108" width="80" height="95" rx="4" />
+            </g>
+          </g>
+        </g>
+      </svg>
+      <p id="previewNote" style="display:none;font-size:12px;color:var(--text-secondary);margin:8px 0 0;">Превью показано для худи. Для этого типа изделия шаблон появится позже.</p>
+    </div>
+
+    <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:1rem 1.1rem;">
+      <h3 id="hZone" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0 0 8px;">Зона размещения принта</h3>
+      <div id="zoneGroup" aria-labelledby="hZone" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
+        <button type="button" class="zoneCard" data-zone="chestLeft" aria-checked="false" style="padding:10px 3px;font-size:11px;">Грудь слева</button>
+        <button type="button" class="zoneCard" data-zone="chestFull" aria-checked="true" style="padding:10px 3px;font-size:11px;border-color:var(--border-accent);background:var(--bg-accent);color:var(--text-accent);">Вся грудь</button>
+        <button type="button" class="zoneCard" data-zone="sleeve" aria-checked="false" style="padding:10px 3px;font-size:11px;">Рукав</button>
+        <button type="button" class="zoneCard" data-zone="back" aria-checked="false" style="padding:10px 3px;font-size:11px;">Спина</button>
+      </div>
+      <p style="font-size:12px;color:var(--text-secondary);margin:8px 0 0;">Пунктир на превью — граница зоны печати.</p>
+    </div>
+
+    <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:1rem 1.1rem;">
+      <h3 id="hType" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0 0 8px;">Тип изделия</h3>
+      <div id="typeGroup" aria-labelledby="hType" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:8px;margin-bottom:14px;">
+        <button type="button" class="typeCard" data-type="tshirt" aria-checked="false" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;">
+          <i class="ti ti-shirt" style="font-size:18px;color:var(--text-secondary);" aria-hidden="true"></i>
+          <span style="font-size:11px;">Футболка</span>
+        </button>
+        <button type="button" class="typeCard" data-type="hoodie" aria-checked="true" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;border-color:var(--border-accent);background:var(--bg-accent);">
+          <i class="ti ti-shirt" style="font-size:18px;color:var(--text-accent);" aria-hidden="true"></i>
+          <span style="font-size:11px;">Худи</span>
+        </button>
+        <button type="button" class="typeCard" data-type="sweatshirt" aria-checked="false" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;">
+          <i class="ti ti-shirt" style="font-size:18px;color:var(--text-secondary);" aria-hidden="true"></i>
+          <span style="font-size:11px;">Свитшот</span>
+        </button>
+        <button type="button" class="typeCard" data-type="longsleeve" aria-checked="false" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;">
+          <i class="ti ti-shirt" style="font-size:18px;color:var(--text-secondary);" aria-hidden="true"></i>
+          <span style="font-size:11px;">Лонгслив</span>
+        </button>
+      </div>
+      <h3 id="hMethod" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0;">Способ нанесения принта</h3>
+      <div id="methodGroup" aria-labelledby="hMethod" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;">
+        <button type="button" class="methodCard" aria-checked="true" style="padding:10px 4px;font-size:12px;border-color:var(--border-accent);background:var(--bg-accent);color:var(--text-accent);">ДТФ</button>
+        <button type="button" class="methodCard" aria-checked="false" style="padding:10px 4px;font-size:12px;">Сублимация</button>
+        <button type="button" class="methodCard" aria-checked="false" style="padding:10px 4px;font-size:12px;">Вышивка</button>
+      </div>
+    </div>
+
+    <button type="button" id="exportBtn" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="ti ti-download" style="font-size:16px;" aria-hidden="true"></i><span id="exportBtnLabel">Скачать файл заказа в PDF</span></button>
+    <p style="font-size:12px;color:var(--text-secondary);margin:0;">Сводная спецификация: параметры заказа и файл макета.</p>
+  </div>
+
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script>
+(function(){
+  function $(id){ return document.getElementById(id); }
+  var svgNS = 'http://www.w3.org/2000/svg';
+
+  if(window.pdfjsLib){
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+  }
+
+  function wireToggle(checkboxId, targetIds){
+    var ids = Array.isArray(targetIds) ? targetIds : [targetIds];
+    $(checkboxId).addEventListener('change', function(){
+      var checked = $(checkboxId).checked;
+      ids.forEach(function(id){ $(id).style.display = checked ? '' : 'none'; });
+    });
+  }
+  wireToggle('optHood', ['elHood', 'elHoodBack']);
+  wireToggle('optZip', 'elZip');
+  wireToggle('optTrim', ['elTrimDetails', 'elTrimDetailsBack']);
+
+  function updatePocketDisplay(){
+    var pocketOn = $('optPocket').checked;
+    var zipOn = $('optZip').checked;
+    if(!pocketOn){
+      $('elPocket').style.display = 'none';
+      $('elPocketLeft').style.display = 'none';
+      $('elPocketRight').style.display = 'none';
+    } else if(zipOn){
+      $('elPocket').style.display = 'none';
+      $('elPocketLeft').style.display = '';
+      $('elPocketRight').style.display = '';
+    } else {
+      $('elPocket').style.display = '';
+      $('elPocketLeft').style.display = 'none';
+      $('elPocketRight').style.display = 'none';
+    }
+  }
+  $('optPocket').addEventListener('change', updatePocketDisplay);
+  $('optZip').addEventListener('change', updatePocketDisplay);
+
+  var TYPE_OPTIONS = {
+    tshirt: ['optTrim'],
+    hoodie: ['optHood', 'optPocket', 'optZip', 'optTrim'],
+    sweatshirt: ['optZip', 'optTrim'],
+    longsleeve: ['optTrim']
+  };
+  function applyTypeOptions(type){
+    var allowed = TYPE_OPTIONS[type] || [];
+    ['optHood', 'optPocket', 'optZip', 'optTrim'].forEach(function(id){
+      var input = $(id);
+      var row = input.closest('label');
+      if(allowed.indexOf(id) === -1){
+        row.style.display = 'none';
+        if(input.checked){
+          input.checked = false;
+          input.dispatchEvent(new Event('change'));
+        }
+      } else {
+        row.style.display = '';
+      }
+    });
+  }
+
+  var LIGHT_BODY_COLORS = ['#ffffff', '#f3c9d3'];
+  function updateZoneOutlineColor(hex){
+    var isLight = LIGHT_BODY_COLORS.indexOf(String(hex).toLowerCase()) !== -1;
+    var strokeColor = isLight ? 'var(--border-strong)' : '#ffffff';
+    $('printZoneOutline').style.stroke = strokeColor;
+    $('printZoneOutlineBack').style.stroke = strokeColor;
+  }
+
+  var ZONES = {
+    chestLeft: { x: 130, y: 115, w: 28, h: 28, view: 'front' },
+    chestFull: { x: 80, y: 108, w: 80, h: 95, view: 'front' },
+    sleeve: { x: 38, y: 115, w: 26, h: 45, view: 'front' },
+    back: { x: 80, y: 108, w: 80, h: 95, view: 'back' }
+  };
+  var currentZone = 'chestFull';
+  var currentFile = null;
+
+  function appendImageToTarget(target, z, href){
+    var img = document.createElementNS(svgNS, 'image');
+    img.setAttribute('href', href);
+    img.setAttribute('x', z.x);
+    img.setAttribute('y', z.y);
+    img.setAttribute('width', z.w);
+    img.setAttribute('height', z.h);
+    img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+    target.appendChild(img);
+  }
+
+  function appendPlaceholder(target, z, label){
+    var g = document.createElementNS(svgNS, 'g');
+    var rect = document.createElementNS(svgNS, 'rect');
+    rect.setAttribute('x', z.x);
+    rect.setAttribute('y', z.y);
+    rect.setAttribute('width', z.w);
+    rect.setAttribute('height', z.h);
+    rect.setAttribute('rx', 4);
+    rect.setAttribute('style', 'fill:var(--surface-2);stroke:var(--border-strong);stroke-width:1');
+    var text = document.createElementNS(svgNS, 'text');
+    text.setAttribute('x', z.x + z.w / 2);
+    text.setAttribute('y', z.y + z.h / 2);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'middle');
+    text.setAttribute('style', 'fill:var(--text-secondary);font-size:9px;');
+    text.textContent = label.toUpperCase();
+    g.appendChild(rect);
+    g.appendChild(text);
+    target.appendChild(g);
+  }
+
+  function renderPdfToDataUrl(file, callback){
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      var typedArray = new Uint8Array(ev.target.result);
+      pdfjsLib.getDocument({ data: typedArray }).promise.then(function(pdf){
+        return pdf.getPage(1);
+      }).then(function(page){
+        var viewport = page.getViewport({ scale: 2 });
+        var canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        var ctx = canvas.getContext('2d');
+        return page.render({ canvasContext: ctx, viewport: viewport }).promise.then(function(){
+          callback(canvas.toDataURL('image/png'));
+        });
+      }).catch(function(){
+        callback(null);
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function buildOverlayContent(target, z){
+    target.innerHTML = '';
+    if(!currentFile){ return; }
+    var ext = currentFile.name.split('.').pop().toLowerCase();
+    var hasRealBytes = currentFile instanceof Blob;
+    if((ext === 'png' || ext === 'jpg' || ext === 'jpeg') && hasRealBytes){
+      var reader = new FileReader();
+      reader.onload = function(ev){ appendImageToTarget(target, z, ev.target.result); };
+      reader.readAsDataURL(currentFile);
+    } else if(ext === 'pdf' && hasRealBytes && window.pdfjsLib){
+      // Реальный рендер страницы PDF в канвас — та же техника пригодна для
+      // предпросмотра как загруженных PDF-макетов, так и итогового PDF после
+      // AVIF-сжатия (см. specification.md, раздел 4.1).
+      renderPdfToDataUrl(currentFile, function(dataUrl){
+        if(dataUrl){ appendImageToTarget(target, z, dataUrl); }
+        else { appendPlaceholder(target, z, ext); }
+      });
+    } else {
+      appendPlaceholder(target, z, ext);
+    }
+  }
+
+  function renderOverlay(){
+    var z = ZONES[currentZone];
+    var isFront = z.view === 'front';
+    var activeOutline = isFront ? $('zoneOutlineRect') : $('zoneOutlineRectBack');
+    var inactiveOutline = isFront ? $('zoneOutlineRectBack') : $('zoneOutlineRect');
+    var activeOverlay = isFront ? $('printOverlay') : $('printOverlayBack');
+    var inactiveOverlay = isFront ? $('printOverlayBack') : $('printOverlay');
+
+    activeOutline.setAttribute('x', z.x);
+    activeOutline.setAttribute('y', z.y);
+    activeOutline.setAttribute('width', z.w);
+    activeOutline.setAttribute('height', z.h);
+    activeOutline.style.display = currentFile ? 'none' : '';
+    inactiveOutline.style.display = 'none';
+    inactiveOverlay.innerHTML = '';
+
+    buildOverlayContent(activeOverlay, z);
+  }
+
+  function wireRadioGroup(container, render, onSelect){
+    container.setAttribute('role', 'radiogroup');
+    var items = Array.prototype.slice.call(container.querySelectorAll(':scope > button'));
+    items.forEach(function(it){ it.setAttribute('role', 'radio'); });
+
+    function apply(idx){
+      items.forEach(function(it, i){
+        var checked = i === idx;
+        it.setAttribute('aria-checked', checked ? 'true' : 'false');
+        it.tabIndex = checked ? 0 : -1;
+        render(it, checked);
+      });
+    }
+    function selectIndex(idx){
+      apply(idx);
+      if(onSelect){ onSelect(items[idx]); }
+    }
+
+    var startIdx = items.findIndex(function(it){ return it.getAttribute('aria-checked') === 'true'; });
+    apply(startIdx === -1 ? 0 : startIdx);
+
+    items.forEach(function(item, idx){
+      item.addEventListener('click', function(){ selectIndex(idx); });
+      item.addEventListener('keydown', function(e){
+        var next = null;
+        if(e.key === 'ArrowRight' || e.key === 'ArrowDown'){ next = (idx + 1) % items.length; }
+        else if(e.key === 'ArrowLeft' || e.key === 'ArrowUp'){ next = (idx - 1 + items.length) % items.length; }
+        if(next !== null){
+          e.preventDefault();
+          selectIndex(next);
+          items[next].focus();
+        }
+      });
+    });
+
+    return {
+      selectWhere: function(predicate){
+        var idx = items.findIndex(predicate);
+        if(idx !== -1){ selectIndex(idx); }
+      },
+      clearChecked: function(){
+        items.forEach(function(it, i){
+          it.setAttribute('aria-checked', 'false');
+          it.tabIndex = i === 0 ? 0 : -1;
+          render(it, false);
+        });
+      }
+    };
+  }
+
+  function renderSimpleChip(btn, checked){
+    btn.style.borderColor = checked ? 'var(--border-accent)' : 'var(--border)';
+    btn.style.background = checked ? 'var(--bg-accent)' : 'transparent';
+    btn.style.color = checked ? 'var(--text-accent)' : '';
+  }
+
+  var viewApi = wireRadioGroup($('viewGroup'), renderSimpleChip, function(btn){
+    var isFront = btn.dataset.view === 'front';
+    $('viewFrontGroup').style.display = isFront ? '' : 'none';
+    $('viewBackGroup').style.display = isFront ? 'none' : '';
+  });
+
+  wireRadioGroup($('typeGroup'), function(btn, checked){
+    btn.style.borderColor = checked ? 'var(--border-accent)' : 'var(--border)';
+    btn.style.background = checked ? 'var(--bg-accent)' : 'transparent';
+    var ic = btn.querySelector('i');
+    if(ic){ ic.style.color = checked ? 'var(--text-accent)' : 'var(--text-secondary)'; }
+  }, function(btn){
+    var note = $('previewNote');
+    var svg = $('preview');
+    if(btn.dataset.type === 'hoodie'){
+      note.style.display = 'none';
+      svg.style.opacity = '1';
+    } else {
+      note.style.display = 'block';
+      svg.style.opacity = '0.35';
+    }
+    applyTypeOptions(btn.dataset.type);
+  });
+  applyTypeOptions('hoodie');
+  updatePocketDisplay();
+
+  wireRadioGroup($('methodGroup'), renderSimpleChip, null);
+
+  wireRadioGroup($('zoneGroup'), renderSimpleChip, function(btn){
+    currentZone = btn.dataset.zone;
+    var targetView = ZONES[currentZone].view;
+    viewApi.selectWhere(function(it){ return it.dataset.view === targetView; });
+    renderOverlay();
+  });
+
+  function fabricValueForCare(careValue, fleece){
+    if(careValue === 'durable'){
+      return fleece ? 'Футер 3-х нитка, с начёсом' : 'Футер 3-х нитка, без начёса';
+    }
+    return fleece ? 'Футер 2-х нитка, с начёсом' : 'Футер 2-х нитка, без начёса';
+  }
+
+  var careApi = wireRadioGroup($('careGroup'), function(btn, checked){
+    btn.style.borderColor = checked ? 'var(--border-accent)' : 'var(--border)';
+    btn.style.background = checked ? 'var(--bg-accent)' : 'transparent';
+    var spans = btn.querySelectorAll('span');
+    spans[0].style.color = checked ? 'var(--text-accent)' : '';
+    spans[1].style.color = checked ? 'var(--text-accent)' : 'var(--text-muted)';
+  }, function(btn){
+    var fleece = $('fabric').value.indexOf('с начёсом') !== -1;
+    $('fabric').value = fabricValueForCare(btn.dataset.care, fleece);
+  });
+
+  $('fabric').addEventListener('change', function(){
+    var val = $('fabric').value;
+    if(val.indexOf('2-х нитка') !== -1){
+      careApi.selectWhere(function(it){ return it.dataset.care === 'gentle'; });
+      $('careAnnounce').textContent = 'Уход за материалом переключён на «Бережный уход»';
+    } else if(val.indexOf('3-х нитка') !== -1){
+      careApi.selectWhere(function(it){ return it.dataset.care === 'durable'; });
+      $('careAnnounce').textContent = 'Уход за материалом переключён на «Долговечный»';
+    }
+  });
+
+  function wireSwatchRow(row){
+    var target = row.dataset.target;
+    var svgEls = target === 'body' ? [$('svgBody'), $('svgBodyBack')] : [$('svgTrim'), $('svgTrimBack')];
+    var customLabel = row.querySelector('.swatchCustom');
+    var customInput = customLabel.querySelector('input[type="color"]');
+    var customCheck = customLabel.querySelector('.swatchCheck');
+
+    var api = wireRadioGroup(row, function(btn, checked){
+      btn.style.boxShadow = checked ? 'inset 0 0 0 2px var(--border-accent)' : 'inset 0 0 0 1px var(--border)';
+      var check = btn.querySelector('.swatchCheck');
+      if(check){ check.style.display = checked ? 'flex' : 'none'; }
+    }, function(btn){
+      svgEls.forEach(function(el){ el.setAttribute('fill', btn.dataset.color); });
+      customCheck.style.display = 'none';
+      if(target === 'body'){ updateZoneOutlineColor(btn.dataset.color); }
+    });
+
+    customInput.addEventListener('input', function(){
+      api.clearChecked();
+      customCheck.style.display = 'flex';
+      svgEls.forEach(function(el){ el.setAttribute('fill', customInput.value); });
+      if(target === 'body'){ updateZoneOutlineColor(customInput.value); }
+    });
+  }
+  document.querySelectorAll('.swatchRow').forEach(wireSwatchRow);
+  updateZoneOutlineColor($('svgBody').getAttribute('fill'));
+
+  var sizeGrid = $('sizeGrid');
+  sizeGrid.addEventListener('input', function(){
+    var inputs = sizeGrid.querySelectorAll('.qtyInput');
+    var total = 0;
+    inputs.forEach(function(i){ total += parseInt(i.value, 10) || 0; });
+    $('totalQty').textContent = 'Итого: ' + total + ' шт.';
+  });
+
+  var sizeModal = $('sizeModalOverlay');
+  var sizeModalTriggerEl = null;
+  function onSizeModalKeydown(e){
+    if(e.key === 'Escape'){ closeSizeModal(); }
+  }
+  function openSizeModal(){
+    sizeModalTriggerEl = document.activeElement;
+    sizeModal.style.display = 'flex';
+    document.addEventListener('keydown', onSizeModalKeydown);
+    $('closeSizeModal').focus();
+  }
+  function closeSizeModal(){
+    sizeModal.style.display = 'none';
+    document.removeEventListener('keydown', onSizeModalKeydown);
+    if(sizeModalTriggerEl){ sizeModalTriggerEl.focus(); }
+  }
+  $('openSizeModal').addEventListener('click', openSizeModal);
+  $('closeSizeModal').addEventListener('click', closeSizeModal);
+  sizeModal.addEventListener('click', function(e){
+    if(e.target === sizeModal){ closeSizeModal(); }
+  });
+
+  function removeFile(){
+    currentFile = null;
+    $('fileList').innerHTML = '';
+    $('fileInput').value = '';
+    renderOverlay();
+  }
+
+  function addFile(file){
+    currentFile = file;
+    var list = $('fileList');
+    list.innerHTML = '';
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface-1);border-radius:var(--radius);';
+    var icon = document.createElement('i');
+    icon.className = 'ti ti-file';
+    icon.style.cssText = 'font-size:16px;color:var(--text-accent);flex-shrink:0;';
+    icon.setAttribute('aria-hidden', 'true');
+    var label = document.createElement('span');
+    label.style.cssText = 'font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    label.textContent = file.name;
+    row.appendChild(icon);
+    row.appendChild(label);
+    var ext = file.name.split('.').pop().toLowerCase();
+    if(ext !== 'png' && ext !== 'jpg' && ext !== 'jpeg' && ext !== 'pdf'){
+      var badge = document.createElement('span');
+      badge.style.cssText = 'font-size:11px;color:var(--text-secondary);flex-shrink:0;';
+      badge.textContent = 'превью недоступно';
+      row.appendChild(badge);
+    }
+    var removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.setAttribute('aria-label', 'Удалить макет');
+    removeBtn.style.cssText = 'padding:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+    var removeIcon = document.createElement('i');
+    removeIcon.className = 'ti ti-x';
+    removeIcon.style.cssText = 'font-size:14px;';
+    removeIcon.setAttribute('aria-hidden', 'true');
+    removeBtn.appendChild(removeIcon);
+    removeBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      removeFile();
+    });
+    row.appendChild(removeBtn);
+    list.appendChild(row);
+    renderOverlay();
+  }
+
+  var MAX_FILE_BYTES = 52 * 1024 * 1024;
+  var MAX_AVIF_TARGET_BYTES = 48 * 1024 * 1024;
+  var MAX_PDF_BYTES = 52 * 1024 * 1024;
+  var RASTER_EXTS = ['png', 'jpg', 'jpeg'];
+
+  function formatMB(bytes){
+    return (bytes / (1024 * 1024)).toFixed(1).replace('.', ',') + ' МБ';
+  }
+
+  var largeFileModal = $('largeFileModalOverlay');
+  var lfTriggerEl = null;
+  var pendingFile = null;
+
+  function showLfState(stateId){
+    ['lfStateChoice', 'lfStateCompressing', 'lfStateSuccess', 'lfStateVector'].forEach(function(id){
+      $(id).style.display = id === stateId ? 'block' : 'none';
+    });
+  }
+
+  function onLfKeydown(e){
+    if(e.key === 'Escape'){ closeLargeFileModal(); }
+  }
+
+  function openLargeFileModal(kind, file){
+    pendingFile = file;
+    lfTriggerEl = document.activeElement;
+    $('lfSizeText').textContent = formatMB(file.size);
+    $('lfSizeTextVector').textContent = formatMB(file.size);
+    showLfState(kind === 'vector' ? 'lfStateVector' : 'lfStateChoice');
+    largeFileModal.style.display = 'flex';
+    document.addEventListener('keydown', onLfKeydown);
+  }
+
+  function closeLargeFileModal(){
+    largeFileModal.style.display = 'none';
+    document.removeEventListener('keydown', onLfKeydown);
+    pendingFile = null;
+    if(lfTriggerEl){ lfTriggerEl.focus(); }
+  }
+
+  function handleIncomingFile(file){
+    if(file.size <= MAX_FILE_BYTES){
+      addFile(file);
+      return;
+    }
+    var ext = file.name.split('.').pop().toLowerCase();
+    if(RASTER_EXTS.indexOf(ext) !== -1){
+      openLargeFileModal('choice', file);
+    } else {
+      openLargeFileModal('vector', file);
+    }
+  }
+
+  var lastAvifSize = 0;
+  var lastPdfSize = 0;
+
+  $('lfCompressBtn').addEventListener('click', function(){
+    $('lfCompressingLabel').textContent = 'Подбираем степень сжатия AVIF…';
+    showLfState('lfStateCompressing');
+    setTimeout(function(){
+      var originalSize = pendingFile.size;
+      // Имитация адаптивного подбора качества AVIF: алгоритм ищет максимальное
+      // качество, укладывающееся в потолок 48 МБ (см. specification.md, раздел 4.1).
+      var avifSize = Math.round(MAX_AVIF_TARGET_BYTES * (0.88 + Math.random() * 0.115));
+      avifSize = Math.min(avifSize, MAX_AVIF_TARGET_BYTES, Math.round(originalSize * 0.9));
+      lastAvifSize = avifSize;
+      $('lfCompressingLabel').textContent = 'Упаковываем в PDF…';
+      setTimeout(function(){
+        // PDF-обёртка поверх уже сжатого изображения — небольшой оверхед, с потолком 52 МБ.
+        var pdfSize = Math.round(avifSize * (1.02 + Math.random() * 0.06));
+        pdfSize = Math.min(pdfSize, MAX_PDF_BYTES);
+        lastPdfSize = pdfSize;
+        $('lfFromSize').textContent = formatMB(originalSize);
+        $('lfToSize').textContent = formatMB(avifSize);
+        $('lfPdfSize').textContent = formatMB(pdfSize);
+        showLfState('lfStateSuccess');
+      }, 900);
+    }, 1400);
+  });
+
+  $('lfDoneBtn').addEventListener('click', function(){
+    var baseName = pendingFile ? pendingFile.name.replace(/\.[^.]+$/, '') : 'macet';
+    var pdfName = 'compressed-' + baseName + '.pdf';
+
+    if(window.jspdf && window.jspdf.jsPDF){
+      var doc = new window.jspdf.jsPDF();
+      doc.setFontSize(14);
+      doc.text('Сжатый макет (демонстрация)', 14, 20);
+      doc.setFontSize(11);
+      doc.text('Исходный файл: ' + (pendingFile ? pendingFile.name : '—') + ' (' + formatMB(pendingFile ? pendingFile.size : 0) + ')', 14, 34);
+      doc.text('Сжато в AVIF: ' + formatMB(lastAvifSize) + ' (автоматически подобранное качество, потолок 48 МБ)', 14, 42);
+      doc.text('Упаковано в PDF: ' + formatMB(lastPdfSize) + ' (потолок 52 МБ)', 14, 50);
+      doc.setFontSize(9);
+      doc.text('В реальной реализации здесь будет настоящее сжатое изображение —', 14, 64);
+      doc.text('это демонстрационная заглушка макета №6 (specification.md, раздел 4.1).', 14, 70);
+      doc.save(pdfName);
+
+      // Настоящий PDF-Blob (не просто имя-заглушка) — нужен, чтобы pdf.js
+      // мог реально отрендерить страницу в превью на изделии, а не показать
+      // текстовую иконку-плашку.
+      var pdfBlob = doc.output('blob');
+      addFile(new File([pdfBlob], pdfName, { type: 'application/pdf' }));
+    } else {
+      addFile({ name: pdfName, size: 0 });
+    }
+
+    closeLargeFileModal();
+  });
+
+  $('lfChooseOtherBtn').addEventListener('click', function(){
+    closeLargeFileModal();
+    $('fileInput').value = '';
+    $('fileInput').click();
+  });
+
+  $('lfVectorOkBtn').addEventListener('click', function(){
+    closeLargeFileModal();
+    $('fileInput').value = '';
+  });
+
+  largeFileModal.addEventListener('click', function(e){
+    if(e.target === largeFileModal){ closeLargeFileModal(); }
+  });
+
+  $('demoLargeRaster').addEventListener('click', function(){
+    handleIncomingFile({ name: 'design_8k_photo.jpg', size: 148 * 1024 * 1024 });
+  });
+  $('demoLargeVector').addEventListener('click', function(){
+    handleIncomingFile({ name: 'print-source.pdf', size: 80 * 1024 * 1024 });
+  });
+
+  var dropzone = $('dropzone');
+  dropzone.addEventListener('dragover', function(e){ e.preventDefault(); dropzone.style.borderColor = 'var(--border-accent)'; });
+  dropzone.addEventListener('dragleave', function(){ dropzone.style.borderColor = 'var(--border-strong)'; });
+  dropzone.addEventListener('drop', function(e){
+    e.preventDefault();
+    dropzone.style.borderColor = 'var(--border-strong)';
+    if(e.dataTransfer.files.length){ handleIncomingFile(e.dataTransfer.files[0]); }
+  });
+  $('fileInput').addEventListener('change', function(e){
+    if(e.target.files.length){ handleIncomingFile(e.target.files[0]); }
+  });
+
+  renderOverlay();
+
+  function checkedText(containerId){
+    var el = document.querySelector('#' + containerId + ' [aria-checked="true"]');
+    return el ? el.textContent.trim() : '—';
+  }
+  function careLabel(){
+    var el = document.querySelector('#careGroup [aria-checked="true"] span:first-child');
+    return el ? el.textContent.trim() : '—';
+  }
+
+  $('exportBtn').addEventListener('click', function(){
+    if(!window.jspdf || !window.jspdf.jsPDF){
+      var lbl = $('exportBtnLabel');
+      var original = lbl.textContent;
+      lbl.textContent = 'Библиотека PDF не загрузилась, попробуйте ещё раз';
+      setTimeout(function(){ lbl.textContent = original; }, 3000);
+      return;
+    }
+    var jsPDF = window.jspdf.jsPDF;
+    var doc = new jsPDF();
+    var y = 20;
+    doc.setFontSize(16);
+    doc.text('Бланк заказа', 14, y);
+    y += 10;
+    doc.setFontSize(11);
+
+    function field(label, value){
+      doc.text(label + ':', 14, y);
+      var lines = doc.splitTextToSize(String(value || '—'), 125);
+      doc.text(lines, 70, y);
+      y += Math.max(8, lines.length * 6);
+    }
+
+    field('Тип изделия', checkedText('typeGroup'));
+    field('Ткань', $('fabric').value);
+    field('Уход за материалом', careLabel());
+    field('Способ нанесения принта', checkedText('methodGroup'));
+
+    var bodyColor = $('svgBody').getAttribute('fill');
+    doc.text('Основной цвет:', 14, y);
+    doc.setFillColor(bodyColor);
+    doc.rect(70, y - 4, 8, 5, 'F');
+    doc.text(bodyColor, 82, y);
+    y += 8;
+
+    var trimColor = $('svgTrim').getAttribute('fill');
+    doc.text('Цвет отделки:', 14, y);
+    doc.setFillColor(trimColor);
+    doc.rect(70, y - 4, 8, 5, 'F');
+    doc.text(trimColor, 82, y);
+    y += 8;
+
+    var sizeParts = [];
+    document.querySelectorAll('.qtyInput').forEach(function(input){
+      var qty = parseInt(input.value, 10) || 0;
+      if(qty > 0){ sizeParts.push(input.id.replace('qty-', '') + ': ' + qty); }
+    });
+    field('Размеры', sizeParts.length ? sizeParts.join(', ') : 'не указаны');
+    field('Итого', $('totalQty').textContent.split(':')[1].trim());
+
+    var optionLabels = { optHood: 'Капюшон', optPocket: 'Карман', optZip: 'Молния', optTrim: 'Отделка' };
+    var options = Object.keys(optionLabels).filter(function(id){
+      var el = $(id);
+      return el.closest('label').style.display !== 'none' && el.checked;
+    }).map(function(id){ return optionLabels[id]; });
+    field('Дополнительные опции', options.length ? options.join(', ') : 'не выбраны');
+
+    field('Зона размещения принта', checkedText('zoneGroup'));
+    field('Файл макета', currentFile ? currentFile.name : 'не загружен');
+    field('Комментарий', $('comment').value);
+
+    try {
+      var blobUrl = doc.output('bloburl');
+      if(typeof openLink === 'function'){
+        openLink(blobUrl);
+      } else {
+        window.open(blobUrl, '_blank');
+      }
+    } catch(err){
+      doc.save('blank-zakaza.pdf');
+    }
+  });
+})();
+</script>
