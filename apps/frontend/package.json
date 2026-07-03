@@ -11,8 +11,10 @@
   },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
+    "@jsquash/avif": "^2.1.1",
     "@reduxjs/toolkit": "^2.2.0",
     "antd": "^5.20.0",
+    "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^4.7.76",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

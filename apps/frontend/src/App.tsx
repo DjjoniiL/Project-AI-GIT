@@ -11,6 +11,7 @@ import { SubmitSection } from './components/SubmitSection';
 import { PreviewPanel } from './components/PreviewPanel';
 import { PrintZoneCard } from './components/PrintZoneCard';
 import { TypeMethodCard } from './components/TypeMethodCard';
+import { ExportPdfButton } from './components/ExportPdfButton';
 
 function App() {
   const dealId = useMemo(() => getDealIdFromLocation(window.location.search), []);
@@ -38,6 +39,7 @@ function App() {
           <PreviewPanel layoutFile={layoutFile} />
           <PrintZoneCard />
           <TypeMethodCard />
+          <ExportPdfButton layoutFile={layoutFile} />
         </div>
       </div>
     </main>

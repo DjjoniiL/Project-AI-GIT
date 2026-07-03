@@ -53,3 +53,47 @@ export const UF_FIELD_MAP: Record<keyof OrderFormData, string> = {
   comment: 'UF_CRM_COMMENT',
   designFileId: 'UF_CRM_DESIGN_FILE_ID',
 };
+
+/**
+ * Человекочитаемые подписи значений формы заказа — общие для фронтенда (карточки выбора)
+ * и бэкенда (HTML-шаблон PDF-бланка заказа, specification.md раздел 5), единственный
+ * источник истины, чтобы тексты не разъезжались между `apps/frontend` и `apps/backend`.
+ */
+export const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {
+  tshirt: 'Футболка',
+  hoodie: 'Худи',
+  sweatshirt: 'Свитшот',
+  longsleeve: 'Лонгслив',
+};
+
+export const FABRIC_LABELS: Record<FabricType, string> = {
+  terry_2_thread_no_fleece: 'Футер 2-х нитка, без начёса',
+  terry_2_thread_fleece: 'Футер 2-х нитка, с начёсом',
+  terry_3_thread_no_fleece: 'Футер 3-х нитка, без начёса',
+  terry_3_thread_fleece: 'Футер 3-х нитка, с начёсом',
+};
+
+export const CARE_LABELS: Record<CareType, { title: string; subtitle: string }> = {
+  durable: { title: 'Долговечный', subtitle: 'стирка 60°' },
+  gentle: { title: 'Бережный уход', subtitle: 'стирка 40°' },
+};
+
+export const PRINT_METHOD_LABELS: Record<PrintMethod, string> = {
+  dtf: 'ДТФ',
+  sublimation: 'Сублимация',
+  embroidery: 'Вышивка',
+};
+
+export const PRINT_ZONE_LABELS: Record<PrintZone, string> = {
+  chest_left: 'Грудь слева',
+  chest_full: 'Вся грудь',
+  sleeve: 'Рукав',
+  back: 'Спина',
+};
+
+export const OPTION_LABELS: Record<ExtraOption, string> = {
+  hood: 'Капюшон',
+  pocket: 'Карман',
+  zip: 'Молния',
+  trim: 'Отделка',
+};
