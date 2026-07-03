@@ -1,0 +1,777 @@
+<!--
+  Макет №5 — финальная версия чернового дизайна на конец сессии 2026-07-03.
+  Согласован пользователем поэтапно (полировка после Макета №4 / handoff).
+  Отличия от design/maket-4.html:
+  - Скруглены острые углы силуэта худи (плечи торсо, манжеты рукавов) — были видны из-под "Отделки".
+  - Карман сдвинут вниз: верхняя грань кармана совпадает с нижней гранью пунктирной зоны "Вся грудь".
+  - Добавлена двусторонняя связь Ткань <-> Уход за материалом: футер 3-х нитка <-> Долговечный (60°),
+    футер 2-х нитка <-> Бережный уход (40°); при переключении вручную сохраняется текущий начёс.
+    Дефолт: "Футер 2-х нитка, без начёса" + "Бережный уход" (согласовано между собой).
+  - Пунктирная рамка зоны печати меняет цвет: белая на всех цветах основного цвета, кроме
+    белого и бледно-розового (там остаётся var(--border-strong)) — для контраста на тёмных цветах.
+  - Добавлены вид спереди/сзади (переключатель над превью) и зона печати "Спина" (4-я в списке зон,
+    автоматически переключает вид на "сзади"). Капюшон и цвета синхронизированы между видами.
+  - "Скачать файл заказа в PDF" теперь рабочая ДЕМОНСТРАЦИЯ (jsPDF из CDN, открывает PDF в новой
+    вкладке) — собирает текущие данные формы в бланк. Это не финальная архитектура (см. specification.md,
+    раздел 5 — реальный рендер будет через backend + Puppeteer/HTML-шаблон), просто чтобы можно было
+    сверить состав полей бланка уже сейчас. Пользователь попросил больше не трогать эту часть до
+    реального внедрения на портал.
+  - У загруженного файла макета появился крестик удаления (была найдена реальная проблема: не было
+    способа убрать неудачно загруженный файл).
+  - Таблица размеров (модалка) теперь открывается внутри карточки "Дополнительные опции", а не
+    "Размеры и количество" — меньше скролла до её содержимого.
+  - Правая колонка переупорядочена: Превью -> Зона размещения принта -> Тип изделия + Способ
+    нанесения принта -> кнопка экспорта. Раньше зона печати была объединена в одну карточку с
+    типом/способом, теперь это отдельная карточка сразу под превью.
+  - Убран верхний отступ над превью (view-toggle уже занимает это место), viewBox SVG обрезан по
+    вертикали (0 18 240 368 вместо 0 0 240 408), чтобы убрать лишние пустые поля сверху/снизу.
+  - Комментарий и зона загрузки макета визуально компактнее (высота textarea зафиксирована в 44px).
+  Формат: HTML/CSS/JS-фрагмент для инструмента предпросмотра (mcp__visualize show_widget),
+  использует CSS-переменные хоста и вебфонт иконок Tabler — при открытии файла напрямую
+  в браузере без хост-окружения стили и иконки не подгрузятся.
+  Не часть кода приложения — референс для Этапа 2 (Итерация 3, каркас проекта).
+  Макеты №1-4 сохранены рядом как предыдущие точки отката.
+-->
+<style>
+.swatchBtn,.swatchCustom{transition:box-shadow .1s;position:relative}
+input[type=color]::-webkit-color-swatch-wrapper{padding:0;border-radius:50%;overflow:hidden}
+input[type=color]::-webkit-color-swatch{border:none}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield}
+#submitBtn:hover{background:var(--fill-accent-hover)}
+#dropzone:focus-within{outline:2px solid var(--border-accent);outline-offset:2px}
+.srOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#comment{height:44px !important;min-height:0 !important;max-height:80px;}
+</style>
+
+<div style="padding:1rem 0;">
+<h2 class="srOnly">Черновой макет конструктора заказов одежды с принтом для встраивания в карточку сделки Битрикс24</h2>
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;padding:10px 14px;background:var(--bg-accent);border-radius:var(--radius);">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <i class="ti ti-external-link" style="font-size:16px;color:var(--text-accent);" aria-hidden="true"></i>
+    <span style="font-size:13px;color:var(--text-accent);">Вкладка в карточке сделки Битрикс24</span>
+  </div>
+  <span style="font-size:13px;font-weight:500;color:var(--text-accent);">Сделка #12345</span>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+
+  <div style="display:flex;flex-direction:column;gap:14px;min-width:0;">
+
+    <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:1rem 1.1rem;">
+      <label for="fabric" style="display:block;font-size:13px;color:var(--text-secondary);margin:0 0 8px;">Ткань</label>
+      <select id="fabric" style="width:100%;margin-bottom:14px;">
+        <option>Футер 2-х нитка, без начёса</option>
+        <option>Футер 2-х нитка, с начёсом</option>
+        <option>Футер 3-х нитка, без начёса</option>
+        <option>Футер 3-х нитка, с начёсом</option>
+      </select>
+      <h3 id="hCare" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0 0 8px;">Уход за материалом</h3>
+      <div id="careGroup" aria-labelledby="hCare" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button type="button" class="careCard" data-care="durable" aria-checked="false" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;">
+          <span style="font-size:13px;">Долговечный</span>
+          <span style="font-size:11px;color:var(--text-muted);">стирка 60°</span>
+        </button>
+        <button type="button" class="careCard" data-care="gentle" aria-checked="true" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-color:var(--border-accent);background:var(--bg-accent);">
+          <span style="font-size:13px;color:var(--text-accent);">Бережный уход</span>
+          <span style="font-size:11px;color:var(--text-accent);">стирка 40°</span>
+        </button>
+      </div>
+      <div id="careAnnounce" aria-live="polite" class="srOnly"></div>
+    </div>
+
+    <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:1rem 1.1rem;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div>
+        <h3 id="hColorBody" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0 0 8px;">Основной цвет</h3>
+        <div class="swatchRow" data-target="body" aria-labelledby="hColorBody" style="display:flex;flex-wrap:wrap;gap:8px;">
+          <button type="button" class="swatchBtn" data-color="#f3c9d3" title="Бледно-розовый" aria-label="Бледно-розовый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#f3c9d3;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#ffffff" title="Белый" aria-label="Белый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#ffffff;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#1a1a1a" title="Чёрный" aria-label="Чёрный" aria-checked="true" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#1a1a1a;border:none;box-shadow:inset 0 0 0 2px var(--border-accent);"><span class="swatchCheck" style="display:flex;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#8a8a8a" title="Серый" aria-label="Серый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#8a8a8a;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#7a1f1f" title="Тёмно-красный" aria-label="Тёмно-красный" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#7a1f1f;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#1f9e96" title="Бирюзовый" aria-label="Бирюзовый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#1f9e96;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#f2c200" title="Ярко-жёлтый" aria-label="Ярко-жёлтый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#f2c200;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <label class="swatchCustom" title="Свой цвет" style="width:24px;height:24px;border-radius:50%;overflow:visible;position:relative;display:inline-block;cursor:pointer;">
+            <span style="position:absolute;top:0;left:0;width:24px;height:24px;border-radius:50%;overflow:hidden;box-shadow:inset 0 0 0 1px var(--border);display:block;">
+              <input type="color" id="colorBodyCustom" aria-label="Свой цвет — основной" value="#9c9c9c" style="width:32px;height:32px;border:none;padding:0;position:absolute;top:-4px;left:-4px;cursor:pointer;">
+              <i class="ti ti-plus" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:10px;color:#fff;pointer-events:none;background:rgba(0,0,0,.35);width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;" aria-hidden="true"></i>
+            </span>
+            <span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;z-index:1;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span>
+          </label>
+        </div>
+      </div>
+      <div>
+        <h3 id="hColorTrim" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0 0 8px;">Цвет отделки</h3>
+        <div class="swatchRow" data-target="trim" aria-labelledby="hColorTrim" style="display:flex;flex-wrap:wrap;gap:8px;">
+          <button type="button" class="swatchBtn" data-color="#f3c9d3" title="Бледно-розовый" aria-label="Бледно-розовый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#f3c9d3;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#ffffff" title="Белый" aria-label="Белый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#ffffff;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#1a1a1a" title="Чёрный" aria-label="Чёрный" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#1a1a1a;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#8a8a8a" title="Серый" aria-label="Серый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#8a8a8a;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#7a1f1f" title="Тёмно-красный" aria-label="Тёмно-красный" aria-checked="true" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#7a1f1f;border:none;box-shadow:inset 0 0 0 2px var(--border-accent);"><span class="swatchCheck" style="display:flex;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#1f9e96" title="Бирюзовый" aria-label="Бирюзовый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#1f9e96;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <button type="button" class="swatchBtn" data-color="#f2c200" title="Ярко-жёлтый" aria-label="Ярко-жёлтый" aria-checked="false" style="width:24px;height:24px;border-radius:50%;padding:0;cursor:pointer;background:#f2c200;border:none;box-shadow:inset 0 0 0 1px var(--border);"><span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span></button>
+          <label class="swatchCustom" title="Свой цвет" style="width:24px;height:24px;border-radius:50%;overflow:visible;position:relative;display:inline-block;cursor:pointer;">
+            <span style="position:absolute;top:0;left:0;width:24px;height:24px;border-radius:50%;overflow:hidden;box-shadow:inset 0 0 0 1px var(--border);display:block;">
+              <input type="color" id="colorTrimCustom" aria-label="Свой цвет — отделка" value="#9c9c9c" style="width:32px;height:32px;border:none;padding:0;position:absolute;top:-4px;left:-4px;cursor:pointer;">
+              <i class="ti ti-plus" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:10px;color:#fff;pointer-events:none;background:rgba(0,0,0,.35);width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;" aria-hidden="true"></i>
+            </span>
+            <span class="swatchCheck" style="display:none;position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--border-strong);align-items:center;justify-content:center;z-index:1;"><i class="ti ti-check" style="font-size:9px;color:#1a1a1a;" aria-hidden="true"></i></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:1rem 1.1rem;">
+      <h3 id="hOptions" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0 0 8px;">Дополнительные опции</h3>
+      <div role="group" aria-labelledby="hOptions" style="display:flex;flex-wrap:wrap;gap:14px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" id="optHood" checked>Капюшон</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" id="optPocket" checked>Карман</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" id="optZip">Молния</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" id="optTrim" checked>Отделка</label>
+      </div>
+      <p style="font-size:12px;color:var(--text-secondary);margin:8px 0 0;">При выборе кармана и молнии — кармана будет два.</p>
+
+      <div id="sizeModalOverlay" style="display:none;min-height:360px;background:rgba(0,0,0,0.45);border-radius:12px;align-items:center;justify-content:center;padding:20px;margin-top:14px;">
+        <div role="dialog" aria-modal="true" aria-labelledby="sizeModalTitle" style="background:var(--surface-2);border-radius:12px;padding:1.1rem 1.25rem;max-width:360px;width:100%;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <p id="sizeModalTitle" style="font-size:15px;font-weight:500;margin:0;">Таблица размеров</p>
+            <button type="button" id="closeSizeModal" aria-label="Закрыть" style="padding:4px 8px;"><i class="ti ti-x" style="font-size:16px;" aria-hidden="true"></i></button>
+          </div>
+          <table style="width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px;">
+            <thead>
+              <tr>
+                <th style="text-align:left;padding:6px 4px;border-bottom:0.5px solid var(--border);color:var(--text-secondary);font-weight:500;">Размер</th>
+                <th style="text-align:right;padding:6px 4px;border-bottom:0.5px solid var(--border);color:var(--text-secondary);font-weight:500;">Грудь, см</th>
+                <th style="text-align:right;padding:6px 4px;border-bottom:0.5px solid var(--border);color:var(--text-secondary);font-weight:500;">Длина, см</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">S</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">92</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">66</td></tr>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">M</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">96</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">68</td></tr>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">L</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">100</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">70</td></tr>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">XL</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">104</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">72</td></tr>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">2XL</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">108</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">74</td></tr>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">3XL</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">112</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">76</td></tr>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">4XL</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">116</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">78</td></tr>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">5XL</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">120</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">80</td></tr>
+              <tr><td style="padding:5px 4px;border-bottom:0.5px solid var(--border);">6XL</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">124</td><td style="text-align:right;padding:5px 4px;border-bottom:0.5px solid var(--border);">82</td></tr>
+              <tr><td style="padding:5px 4px;">7XL</td><td style="text-align:right;padding:5px 4px;">128</td><td style="text-align:right;padding:5px 4px;">84</td></tr>
+            </tbody>
+          </table>
+          <p style="font-size:11px;color:var(--text-secondary);margin:10px 0 0;">Замеры приблизительные, для ориентира при выборе размера.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:0.7rem 1.1rem;">
+      <h3 id="hMacet" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0 0 6px;">Макет принта</h3>
+      <label id="dropzone" for="fileInput" style="display:block;border:1.5px dashed var(--border-strong);border-radius:var(--radius);padding:8px 10px;text-align:center;cursor:pointer;">
+        <i class="ti ti-upload" style="font-size:15px;color:var(--text-muted);" aria-hidden="true"></i>
+        <p style="font-size:12px;margin:4px 0 2px;">Перетащите файл или выберите на компьютере</p>
+        <p style="font-size:11px;color:var(--text-secondary);margin:0;">.png, .jpg, .pdf, .ai, .eps — до 115 МБ</p>
+      </label>
+      <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.pdf,.ai,.eps" class="srOnly">
+      <div id="fileList" style="margin-top:6px;display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+
+    <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:1rem 1.1rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <h3 id="hSizes" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0;">Размеры и количество</h3>
+          <button type="button" id="openSizeModal" style="padding:3px 8px;font-size:11px;display:inline-flex;align-items:center;gap:4px;">
+            <i class="ti ti-ruler-2" style="font-size:13px;" aria-hidden="true"></i>Таблица размеров
+          </button>
+        </div>
+        <span id="totalQty" style="font-size:13px;font-weight:500;" aria-live="polite">Итого: 0 шт.</span>
+      </div>
+      <div id="sizeGrid" role="group" aria-labelledby="hSizes" style="display:grid;grid-template-columns:repeat(10,1fr);gap:4px;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-S" style="font-size:11px;color:var(--text-secondary);">S</label><input type="number" min="0" value="0" id="qty-S" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-M" style="font-size:11px;color:var(--text-secondary);">M</label><input type="number" min="0" value="0" id="qty-M" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-L" style="font-size:11px;color:var(--text-secondary);">L</label><input type="number" min="0" value="0" id="qty-L" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-XL" style="font-size:11px;color:var(--text-secondary);">XL</label><input type="number" min="0" value="0" id="qty-XL" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-2XL" style="font-size:11px;color:var(--text-secondary);">2XL</label><input type="number" min="0" value="0" id="qty-2XL" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-3XL" style="font-size:11px;color:var(--text-secondary);">3XL</label><input type="number" min="0" value="0" id="qty-3XL" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-4XL" style="font-size:11px;color:var(--text-secondary);">4XL</label><input type="number" min="0" value="0" id="qty-4XL" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-5XL" style="font-size:11px;color:var(--text-secondary);">5XL</label><input type="number" min="0" value="0" id="qty-5XL" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-6XL" style="font-size:11px;color:var(--text-secondary);">6XL</label><input type="number" min="0" value="0" id="qty-6XL" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><label for="qty-7XL" style="font-size:11px;color:var(--text-secondary);">7XL</label><input type="number" min="0" value="0" id="qty-7XL" class="qtyInput" style="width:100%;text-align:center;padding:3px 1px;font-size:11px;"></div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:1rem 1.1rem;">
+      <label for="comment" style="display:block;font-size:13px;color:var(--text-secondary);margin:0 0 6px;">Комментарий</label>
+      <textarea id="comment" rows="2" placeholder="Пожелания по печати, отделке или комплектации" style="width:100%;resize:vertical;font-size:13px;padding:5px 8px;line-height:1.3;"></textarea>
+    </div>
+
+    <button type="button" id="submitBtn" style="width:100%;background:var(--fill-accent);color:var(--on-accent);border:none;">Отправить в сделку</button>
+    <p style="font-size:12px;color:var(--text-secondary);margin:0;">Создаст сделку в Битрикс24 (или обновит текущую) и прикрепит макет.</p>
+
+  </div>
+
+  <div style="position:sticky;top:0;display:flex;flex-direction:column;gap:10px;min-width:0;">
+
+    <div style="background:var(--surface-1);border-radius:12px;padding:16px;">
+      <div id="viewGroup" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+        <button type="button" class="viewCard" data-view="front" aria-checked="true" style="padding:8px 4px;font-size:12px;border-color:var(--border-accent);background:var(--bg-accent);color:var(--text-accent);">Вид спереди</button>
+        <button type="button" class="viewCard" data-view="back" aria-checked="false" style="padding:8px 4px;font-size:12px;">Вид со спины</button>
+      </div>
+      <svg id="preview" viewBox="0 18 240 368" role="img" style="width:100%;height:auto;display:block;transition:opacity .15s;">
+        <title>Схематичное превью изделия</title>
+        <g transform="scale(1,1.36)">
+          <g id="viewFrontGroup">
+            <g id="svgBody" fill="#1a1a1a" stroke="var(--border-strong)" stroke-width="0.8">
+              <path d="M74.5,94 Q75,88 69.2,89.6 L37.8,98.4 Q28,102 29,108 L37.2,172 Q38,178 43.7,176.1 L62.3,169.9 Q68,168 68.5,162 L74.5,94 Z" />
+              <path d="M165.5,94 Q165,88 170.8,89.6 L202.2,98.4 Q212,102 211,108 L202.8,172 Q202,178 196.3,176.1 L177.7,169.9 Q172,168 171.5,162 L165.5,94 Z" />
+              <path d="M81,85 L159,85 Q165,85 165,91 L172,265 Q172,278 159,278 L81,278 Q68,278 68,265 L75,91 Q75,85 81,85 Z" />
+            </g>
+            <g id="printOverlay"></g>
+            <g id="svgTrim" fill="#7a1f1f" stroke="var(--border-strong)" stroke-width="0.8">
+              <path id="elHood" d="M82,85 Q120,18 158,85 Q150,100 120,102 Q90,100 82,85 Z" />
+              <rect id="elPocket" x="95" y="203" width="50" height="34" rx="8" />
+              <rect id="elPocketLeft" x="72" y="213" width="38" height="16" rx="8" style="display:none;" />
+              <rect id="elPocketRight" x="130" y="213" width="38" height="16" rx="8" style="display:none;" />
+              <g id="elZip" style="display:none;">
+                <rect x="118" y="100" width="4" height="160" />
+                <rect x="112" y="258" width="16" height="10" rx="3" />
+              </g>
+              <g id="elTrimDetails">
+                <rect x="28" y="160" width="42" height="16" rx="6" />
+                <rect x="170" y="160" width="42" height="16" rx="6" />
+                <rect x="68" y="262" width="104" height="18" rx="8" />
+                <rect x="103" y="95" width="3" height="45" rx="1.5" />
+                <rect x="134" y="95" width="3" height="45" rx="1.5" />
+                <circle cx="104.5" cy="142" r="3" />
+                <circle cx="135.5" cy="142" r="3" />
+              </g>
+            </g>
+            <g id="printZoneOutline" fill="none" style="stroke:#ffffff;" stroke-dasharray="4 3" stroke-width="1.2">
+              <rect id="zoneOutlineRect" x="80" y="108" width="80" height="95" rx="4" />
+            </g>
+          </g>
+          <g id="viewBackGroup" style="display:none;">
+            <g id="svgBodyBack" fill="#1a1a1a" stroke="var(--border-strong)" stroke-width="0.8">
+              <path d="M74.5,94 Q75,88 69.2,89.6 L37.8,98.4 Q28,102 29,108 L37.2,172 Q38,178 43.7,176.1 L62.3,169.9 Q68,168 68.5,162 L74.5,94 Z" />
+              <path d="M165.5,94 Q165,88 170.8,89.6 L202.2,98.4 Q212,102 211,108 L202.8,172 Q202,178 196.3,176.1 L177.7,169.9 Q172,168 171.5,162 L165.5,94 Z" />
+              <path d="M81,85 L159,85 Q165,85 165,91 L172,265 Q172,278 159,278 L81,278 Q68,278 68,265 L75,91 Q75,85 81,85 Z" />
+            </g>
+            <g id="printOverlayBack"></g>
+            <g id="svgTrimBack" fill="#7a1f1f" stroke="var(--border-strong)" stroke-width="0.8">
+              <path id="elHoodBack" d="M78,82 Q120,15 162,82 Q155,105 120,108 Q85,105 78,82 Z" />
+              <g id="elTrimDetailsBack">
+                <rect x="28" y="160" width="42" height="16" rx="6" />
+                <rect x="170" y="160" width="42" height="16" rx="6" />
+                <rect x="68" y="262" width="104" height="18" rx="8" />
+              </g>
+            </g>
+            <g id="printZoneOutlineBack" fill="none" style="stroke:#ffffff;" stroke-dasharray="4 3" stroke-width="1.2">
+              <rect id="zoneOutlineRectBack" x="80" y="108" width="80" height="95" rx="4" />
+            </g>
+          </g>
+        </g>
+      </svg>
+      <p id="previewNote" style="display:none;font-size:12px;color:var(--text-secondary);margin:8px 0 0;">Превью показано для худи. Для этого типа изделия шаблон появится позже.</p>
+    </div>
+
+    <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:1rem 1.1rem;">
+      <h3 id="hZone" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0 0 8px;">Зона размещения принта</h3>
+      <div id="zoneGroup" aria-labelledby="hZone" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
+        <button type="button" class="zoneCard" data-zone="chestLeft" aria-checked="false" style="padding:10px 3px;font-size:11px;">Грудь слева</button>
+        <button type="button" class="zoneCard" data-zone="chestFull" aria-checked="true" style="padding:10px 3px;font-size:11px;border-color:var(--border-accent);background:var(--bg-accent);color:var(--text-accent);">Вся грудь</button>
+        <button type="button" class="zoneCard" data-zone="sleeve" aria-checked="false" style="padding:10px 3px;font-size:11px;">Рукав</button>
+        <button type="button" class="zoneCard" data-zone="back" aria-checked="false" style="padding:10px 3px;font-size:11px;">Спина</button>
+      </div>
+      <p style="font-size:12px;color:var(--text-secondary);margin:8px 0 0;">Пунктир на превью — граница зоны печати.</p>
+    </div>
+
+    <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:1rem 1.1rem;">
+      <h3 id="hType" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0 0 8px;">Тип изделия</h3>
+      <div id="typeGroup" aria-labelledby="hType" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:8px;margin-bottom:14px;">
+        <button type="button" class="typeCard" data-type="tshirt" aria-checked="false" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;">
+          <i class="ti ti-shirt" style="font-size:18px;color:var(--text-secondary);" aria-hidden="true"></i>
+          <span style="font-size:11px;">Футболка</span>
+        </button>
+        <button type="button" class="typeCard" data-type="hoodie" aria-checked="true" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;border-color:var(--border-accent);background:var(--bg-accent);">
+          <i class="ti ti-shirt" style="font-size:18px;color:var(--text-accent);" aria-hidden="true"></i>
+          <span style="font-size:11px;">Худи</span>
+        </button>
+        <button type="button" class="typeCard" data-type="sweatshirt" aria-checked="false" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;">
+          <i class="ti ti-shirt" style="font-size:18px;color:var(--text-secondary);" aria-hidden="true"></i>
+          <span style="font-size:11px;">Свитшот</span>
+        </button>
+        <button type="button" class="typeCard" data-type="longsleeve" aria-checked="false" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;">
+          <i class="ti ti-shirt" style="font-size:18px;color:var(--text-secondary);" aria-hidden="true"></i>
+          <span style="font-size:11px;">Лонгслив</span>
+        </button>
+      </div>
+      <h3 id="hMethod" style="font-size:13px;font-weight:400;color:var(--text-secondary);margin:0;">Способ нанесения принта</h3>
+      <div id="methodGroup" aria-labelledby="hMethod" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;">
+        <button type="button" class="methodCard" aria-checked="true" style="padding:10px 4px;font-size:12px;border-color:var(--border-accent);background:var(--bg-accent);color:var(--text-accent);">ДТФ</button>
+        <button type="button" class="methodCard" aria-checked="false" style="padding:10px 4px;font-size:12px;">Сублимация</button>
+        <button type="button" class="methodCard" aria-checked="false" style="padding:10px 4px;font-size:12px;">Вышивка</button>
+      </div>
+    </div>
+
+    <button type="button" id="exportBtn" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="ti ti-download" style="font-size:16px;" aria-hidden="true"></i><span id="exportBtnLabel">Скачать файл заказа в PDF</span></button>
+    <p style="font-size:12px;color:var(--text-secondary);margin:0;">Сводная спецификация: параметры заказа и файл макета.</p>
+  </div>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script>
+(function(){
+  function $(id){ return document.getElementById(id); }
+  var svgNS = 'http://www.w3.org/2000/svg';
+
+  function wireToggle(checkboxId, targetIds){
+    var ids = Array.isArray(targetIds) ? targetIds : [targetIds];
+    $(checkboxId).addEventListener('change', function(){
+      var checked = $(checkboxId).checked;
+      ids.forEach(function(id){ $(id).style.display = checked ? '' : 'none'; });
+    });
+  }
+  wireToggle('optHood', ['elHood', 'elHoodBack']);
+  wireToggle('optZip', 'elZip');
+  wireToggle('optTrim', ['elTrimDetails', 'elTrimDetailsBack']);
+
+  function updatePocketDisplay(){
+    var pocketOn = $('optPocket').checked;
+    var zipOn = $('optZip').checked;
+    if(!pocketOn){
+      $('elPocket').style.display = 'none';
+      $('elPocketLeft').style.display = 'none';
+      $('elPocketRight').style.display = 'none';
+    } else if(zipOn){
+      $('elPocket').style.display = 'none';
+      $('elPocketLeft').style.display = '';
+      $('elPocketRight').style.display = '';
+    } else {
+      $('elPocket').style.display = '';
+      $('elPocketLeft').style.display = 'none';
+      $('elPocketRight').style.display = 'none';
+    }
+  }
+  $('optPocket').addEventListener('change', updatePocketDisplay);
+  $('optZip').addEventListener('change', updatePocketDisplay);
+
+  var TYPE_OPTIONS = {
+    tshirt: ['optTrim'],
+    hoodie: ['optHood', 'optPocket', 'optZip', 'optTrim'],
+    sweatshirt: ['optZip', 'optTrim'],
+    longsleeve: ['optTrim']
+  };
+  function applyTypeOptions(type){
+    var allowed = TYPE_OPTIONS[type] || [];
+    ['optHood', 'optPocket', 'optZip', 'optTrim'].forEach(function(id){
+      var input = $(id);
+      var row = input.closest('label');
+      if(allowed.indexOf(id) === -1){
+        row.style.display = 'none';
+        if(input.checked){
+          input.checked = false;
+          input.dispatchEvent(new Event('change'));
+        }
+      } else {
+        row.style.display = '';
+      }
+    });
+  }
+
+  var LIGHT_BODY_COLORS = ['#ffffff', '#f3c9d3'];
+  function updateZoneOutlineColor(hex){
+    var isLight = LIGHT_BODY_COLORS.indexOf(String(hex).toLowerCase()) !== -1;
+    var strokeColor = isLight ? 'var(--border-strong)' : '#ffffff';
+    $('printZoneOutline').style.stroke = strokeColor;
+    $('printZoneOutlineBack').style.stroke = strokeColor;
+  }
+
+  var ZONES = {
+    chestLeft: { x: 130, y: 115, w: 28, h: 28, view: 'front' },
+    chestFull: { x: 80, y: 108, w: 80, h: 95, view: 'front' },
+    sleeve: { x: 38, y: 115, w: 26, h: 45, view: 'front' },
+    back: { x: 80, y: 108, w: 80, h: 95, view: 'back' }
+  };
+  var currentZone = 'chestFull';
+  var currentFile = null;
+
+  function buildOverlayContent(target, z){
+    target.innerHTML = '';
+    if(!currentFile){ return; }
+    var ext = currentFile.name.split('.').pop().toLowerCase();
+    if(ext === 'png' || ext === 'jpg' || ext === 'jpeg'){
+      var reader = new FileReader();
+      reader.onload = function(ev){
+        var img = document.createElementNS(svgNS, 'image');
+        img.setAttribute('href', ev.target.result);
+        img.setAttribute('x', z.x);
+        img.setAttribute('y', z.y);
+        img.setAttribute('width', z.w);
+        img.setAttribute('height', z.h);
+        img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+        target.appendChild(img);
+      };
+      reader.readAsDataURL(currentFile);
+    } else {
+      var g = document.createElementNS(svgNS, 'g');
+      var rect = document.createElementNS(svgNS, 'rect');
+      rect.setAttribute('x', z.x);
+      rect.setAttribute('y', z.y);
+      rect.setAttribute('width', z.w);
+      rect.setAttribute('height', z.h);
+      rect.setAttribute('rx', 4);
+      rect.setAttribute('style', 'fill:var(--surface-2);stroke:var(--border-strong);stroke-width:1');
+      var text = document.createElementNS(svgNS, 'text');
+      text.setAttribute('x', z.x + z.w / 2);
+      text.setAttribute('y', z.y + z.h / 2);
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('dominant-baseline', 'middle');
+      text.setAttribute('style', 'fill:var(--text-secondary);font-size:9px;');
+      text.textContent = ext.toUpperCase();
+      g.appendChild(rect);
+      g.appendChild(text);
+      target.appendChild(g);
+    }
+  }
+
+  function renderOverlay(){
+    var z = ZONES[currentZone];
+    var isFront = z.view === 'front';
+    var activeOutline = isFront ? $('zoneOutlineRect') : $('zoneOutlineRectBack');
+    var inactiveOutline = isFront ? $('zoneOutlineRectBack') : $('zoneOutlineRect');
+    var activeOverlay = isFront ? $('printOverlay') : $('printOverlayBack');
+    var inactiveOverlay = isFront ? $('printOverlayBack') : $('printOverlay');
+
+    activeOutline.setAttribute('x', z.x);
+    activeOutline.setAttribute('y', z.y);
+    activeOutline.setAttribute('width', z.w);
+    activeOutline.setAttribute('height', z.h);
+    activeOutline.style.display = currentFile ? 'none' : '';
+    inactiveOutline.style.display = 'none';
+    inactiveOverlay.innerHTML = '';
+
+    buildOverlayContent(activeOverlay, z);
+  }
+
+  function wireRadioGroup(container, render, onSelect){
+    container.setAttribute('role', 'radiogroup');
+    var items = Array.prototype.slice.call(container.querySelectorAll(':scope > button'));
+    items.forEach(function(it){ it.setAttribute('role', 'radio'); });
+
+    function apply(idx){
+      items.forEach(function(it, i){
+        var checked = i === idx;
+        it.setAttribute('aria-checked', checked ? 'true' : 'false');
+        it.tabIndex = checked ? 0 : -1;
+        render(it, checked);
+      });
+    }
+    function selectIndex(idx){
+      apply(idx);
+      if(onSelect){ onSelect(items[idx]); }
+    }
+
+    var startIdx = items.findIndex(function(it){ return it.getAttribute('aria-checked') === 'true'; });
+    apply(startIdx === -1 ? 0 : startIdx);
+
+    items.forEach(function(item, idx){
+      item.addEventListener('click', function(){ selectIndex(idx); });
+      item.addEventListener('keydown', function(e){
+        var next = null;
+        if(e.key === 'ArrowRight' || e.key === 'ArrowDown'){ next = (idx + 1) % items.length; }
+        else if(e.key === 'ArrowLeft' || e.key === 'ArrowUp'){ next = (idx - 1 + items.length) % items.length; }
+        if(next !== null){
+          e.preventDefault();
+          selectIndex(next);
+          items[next].focus();
+        }
+      });
+    });
+
+    return {
+      selectWhere: function(predicate){
+        var idx = items.findIndex(predicate);
+        if(idx !== -1){ selectIndex(idx); }
+      },
+      clearChecked: function(){
+        items.forEach(function(it, i){
+          it.setAttribute('aria-checked', 'false');
+          it.tabIndex = i === 0 ? 0 : -1;
+          render(it, false);
+        });
+      }
+    };
+  }
+
+  function renderSimpleChip(btn, checked){
+    btn.style.borderColor = checked ? 'var(--border-accent)' : 'var(--border)';
+    btn.style.background = checked ? 'var(--bg-accent)' : 'transparent';
+    btn.style.color = checked ? 'var(--text-accent)' : '';
+  }
+
+  var viewApi = wireRadioGroup($('viewGroup'), renderSimpleChip, function(btn){
+    var isFront = btn.dataset.view === 'front';
+    $('viewFrontGroup').style.display = isFront ? '' : 'none';
+    $('viewBackGroup').style.display = isFront ? 'none' : '';
+  });
+
+  wireRadioGroup($('typeGroup'), function(btn, checked){
+    btn.style.borderColor = checked ? 'var(--border-accent)' : 'var(--border)';
+    btn.style.background = checked ? 'var(--bg-accent)' : 'transparent';
+    var ic = btn.querySelector('i');
+    if(ic){ ic.style.color = checked ? 'var(--text-accent)' : 'var(--text-secondary)'; }
+  }, function(btn){
+    var note = $('previewNote');
+    var svg = $('preview');
+    if(btn.dataset.type === 'hoodie'){
+      note.style.display = 'none';
+      svg.style.opacity = '1';
+    } else {
+      note.style.display = 'block';
+      svg.style.opacity = '0.35';
+    }
+    applyTypeOptions(btn.dataset.type);
+  });
+  applyTypeOptions('hoodie');
+  updatePocketDisplay();
+
+  wireRadioGroup($('methodGroup'), renderSimpleChip, null);
+
+  wireRadioGroup($('zoneGroup'), renderSimpleChip, function(btn){
+    currentZone = btn.dataset.zone;
+    var targetView = ZONES[currentZone].view;
+    viewApi.selectWhere(function(it){ return it.dataset.view === targetView; });
+    renderOverlay();
+  });
+
+  function fabricValueForCare(careValue, fleece){
+    if(careValue === 'durable'){
+      return fleece ? 'Футер 3-х нитка, с начёсом' : 'Футер 3-х нитка, без начёса';
+    }
+    return fleece ? 'Футер 2-х нитка, с начёсом' : 'Футер 2-х нитка, без начёса';
+  }
+
+  var careApi = wireRadioGroup($('careGroup'), function(btn, checked){
+    btn.style.borderColor = checked ? 'var(--border-accent)' : 'var(--border)';
+    btn.style.background = checked ? 'var(--bg-accent)' : 'transparent';
+    var spans = btn.querySelectorAll('span');
+    spans[0].style.color = checked ? 'var(--text-accent)' : '';
+    spans[1].style.color = checked ? 'var(--text-accent)' : 'var(--text-muted)';
+  }, function(btn){
+    var fleece = $('fabric').value.indexOf('с начёсом') !== -1;
+    $('fabric').value = fabricValueForCare(btn.dataset.care, fleece);
+  });
+
+  $('fabric').addEventListener('change', function(){
+    var val = $('fabric').value;
+    if(val.indexOf('2-х нитка') !== -1){
+      careApi.selectWhere(function(it){ return it.dataset.care === 'gentle'; });
+      $('careAnnounce').textContent = 'Уход за материалом переключён на «Бережный уход»';
+    } else if(val.indexOf('3-х нитка') !== -1){
+      careApi.selectWhere(function(it){ return it.dataset.care === 'durable'; });
+      $('careAnnounce').textContent = 'Уход за материалом переключён на «Долговечный»';
+    }
+  });
+
+  function wireSwatchRow(row){
+    var target = row.dataset.target;
+    var svgEls = target === 'body' ? [$('svgBody'), $('svgBodyBack')] : [$('svgTrim'), $('svgTrimBack')];
+    var customLabel = row.querySelector('.swatchCustom');
+    var customInput = customLabel.querySelector('input[type="color"]');
+    var customCheck = customLabel.querySelector('.swatchCheck');
+
+    var api = wireRadioGroup(row, function(btn, checked){
+      btn.style.boxShadow = checked ? 'inset 0 0 0 2px var(--border-accent)' : 'inset 0 0 0 1px var(--border)';
+      var check = btn.querySelector('.swatchCheck');
+      if(check){ check.style.display = checked ? 'flex' : 'none'; }
+    }, function(btn){
+      svgEls.forEach(function(el){ el.setAttribute('fill', btn.dataset.color); });
+      customCheck.style.display = 'none';
+      if(target === 'body'){ updateZoneOutlineColor(btn.dataset.color); }
+    });
+
+    customInput.addEventListener('input', function(){
+      api.clearChecked();
+      customCheck.style.display = 'flex';
+      svgEls.forEach(function(el){ el.setAttribute('fill', customInput.value); });
+      if(target === 'body'){ updateZoneOutlineColor(customInput.value); }
+    });
+  }
+  document.querySelectorAll('.swatchRow').forEach(wireSwatchRow);
+  updateZoneOutlineColor($('svgBody').getAttribute('fill'));
+
+  var sizeGrid = $('sizeGrid');
+  sizeGrid.addEventListener('input', function(){
+    var inputs = sizeGrid.querySelectorAll('.qtyInput');
+    var total = 0;
+    inputs.forEach(function(i){ total += parseInt(i.value, 10) || 0; });
+    $('totalQty').textContent = 'Итого: ' + total + ' шт.';
+  });
+
+  var sizeModal = $('sizeModalOverlay');
+  var modalTriggerEl = null;
+  function onModalKeydown(e){
+    if(e.key === 'Escape'){ closeModal(); }
+  }
+  function openModal(){
+    modalTriggerEl = document.activeElement;
+    sizeModal.style.display = 'flex';
+    document.addEventListener('keydown', onModalKeydown);
+    $('closeSizeModal').focus();
+  }
+  function closeModal(){
+    sizeModal.style.display = 'none';
+    document.removeEventListener('keydown', onModalKeydown);
+    if(modalTriggerEl){ modalTriggerEl.focus(); }
+  }
+  $('openSizeModal').addEventListener('click', openModal);
+  $('closeSizeModal').addEventListener('click', closeModal);
+  sizeModal.addEventListener('click', function(e){
+    if(e.target === sizeModal){ closeModal(); }
+  });
+
+  function removeFile(){
+    currentFile = null;
+    $('fileList').innerHTML = '';
+    $('fileInput').value = '';
+    renderOverlay();
+  }
+
+  function addFile(file){
+    currentFile = file;
+    var list = $('fileList');
+    list.innerHTML = '';
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface-1);border-radius:var(--radius);';
+    var icon = document.createElement('i');
+    icon.className = 'ti ti-file';
+    icon.style.cssText = 'font-size:16px;color:var(--text-accent);flex-shrink:0;';
+    icon.setAttribute('aria-hidden', 'true');
+    var label = document.createElement('span');
+    label.style.cssText = 'font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    label.textContent = file.name;
+    row.appendChild(icon);
+    row.appendChild(label);
+    var ext = file.name.split('.').pop().toLowerCase();
+    if(ext !== 'png' && ext !== 'jpg' && ext !== 'jpeg'){
+      var badge = document.createElement('span');
+      badge.style.cssText = 'font-size:11px;color:var(--text-secondary);flex-shrink:0;';
+      badge.textContent = 'превью недоступно';
+      row.appendChild(badge);
+    }
+    var removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.setAttribute('aria-label', 'Удалить макет');
+    removeBtn.style.cssText = 'padding:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+    var removeIcon = document.createElement('i');
+    removeIcon.className = 'ti ti-x';
+    removeIcon.style.cssText = 'font-size:14px;';
+    removeIcon.setAttribute('aria-hidden', 'true');
+    removeBtn.appendChild(removeIcon);
+    removeBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      removeFile();
+    });
+    row.appendChild(removeBtn);
+    list.appendChild(row);
+    renderOverlay();
+  }
+
+  var dropzone = $('dropzone');
+  dropzone.addEventListener('dragover', function(e){ e.preventDefault(); dropzone.style.borderColor = 'var(--border-accent)'; });
+  dropzone.addEventListener('dragleave', function(){ dropzone.style.borderColor = 'var(--border-strong)'; });
+  dropzone.addEventListener('drop', function(e){
+    e.preventDefault();
+    dropzone.style.borderColor = 'var(--border-strong)';
+    if(e.dataTransfer.files.length){ addFile(e.dataTransfer.files[0]); }
+  });
+  $('fileInput').addEventListener('change', function(e){
+    if(e.target.files.length){ addFile(e.target.files[0]); }
+  });
+
+  renderOverlay();
+
+  function checkedText(containerId){
+    var el = document.querySelector('#' + containerId + ' [aria-checked="true"]');
+    return el ? el.textContent.trim() : '—';
+  }
+  function careLabel(){
+    var el = document.querySelector('#careGroup [aria-checked="true"] span:first-child');
+    return el ? el.textContent.trim() : '—';
+  }
+
+  $('exportBtn').addEventListener('click', function(){
+    if(!window.jspdf || !window.jspdf.jsPDF){
+      var lbl = $('exportBtnLabel');
+      var original = lbl.textContent;
+      lbl.textContent = 'Библиотека PDF не загрузилась, попробуйте ещё раз';
+      setTimeout(function(){ lbl.textContent = original; }, 3000);
+      return;
+    }
+    var jsPDF = window.jspdf.jsPDF;
+    var doc = new jsPDF();
+    var y = 20;
+    doc.setFontSize(16);
+    doc.text('Бланк заказа', 14, y);
+    y += 10;
+    doc.setFontSize(11);
+
+    function field(label, value){
+      doc.text(label + ':', 14, y);
+      var lines = doc.splitTextToSize(String(value || '—'), 125);
+      doc.text(lines, 70, y);
+      y += Math.max(8, lines.length * 6);
+    }
+
+    field('Тип изделия', checkedText('typeGroup'));
+    field('Ткань', $('fabric').value);
+    field('Уход за материалом', careLabel());
+    field('Способ нанесения принта', checkedText('methodGroup'));
+
+    var bodyColor = $('svgBody').getAttribute('fill');
+    doc.text('Основной цвет:', 14, y);
+    doc.setFillColor(bodyColor);
+    doc.rect(70, y - 4, 8, 5, 'F');
+    doc.text(bodyColor, 82, y);
+    y += 8;
+
+    var trimColor = $('svgTrim').getAttribute('fill');
+    doc.text('Цвет отделки:', 14, y);
+    doc.setFillColor(trimColor);
+    doc.rect(70, y - 4, 8, 5, 'F');
+    doc.text(trimColor, 82, y);
+    y += 8;
+
+    var sizeParts = [];
+    document.querySelectorAll('.qtyInput').forEach(function(input){
+      var qty = parseInt(input.value, 10) || 0;
+      if(qty > 0){ sizeParts.push(input.id.replace('qty-', '') + ': ' + qty); }
+    });
+    field('Размеры', sizeParts.length ? sizeParts.join(', ') : 'не указаны');
+    field('Итого', $('totalQty').textContent.split(':')[1].trim());
+
+    var optionLabels = { optHood: 'Капюшон', optPocket: 'Карман', optZip: 'Молния', optTrim: 'Отделка' };
+    var options = Object.keys(optionLabels).filter(function(id){
+      var el = $(id);
+      return el.closest('label').style.display !== 'none' && el.checked;
+    }).map(function(id){ return optionLabels[id]; });
+    field('Дополнительные опции', options.length ? options.join(', ') : 'не выбраны');
+
+    field('Зона размещения принта', checkedText('zoneGroup'));
+    field('Файл макета', currentFile ? currentFile.name : 'не загружен');
+    field('Комментарий', $('comment').value);
+
+    try {
+      var blobUrl = doc.output('bloburl');
+      if(typeof openLink === 'function'){
+        openLink(blobUrl);
+      } else {
+        window.open(blobUrl, '_blank');
+      }
+    } catch(err){
+      doc.save('blank-zakaza.pdf');
+    }
+  });
+})();
+</script>
