@@ -1,5 +1,28 @@
 # Конструктор заказов одежды с принтом (интеграция с Битрикс24)
 
+## Актуальный контур на 2026-07-23
+
+Тестовый портал перенесён на **`vibecode01.bitrix24.ru`**. Старый портал `vibecode02.bitrix24.ru`, старые VibeCode server/app id и старый `appUrl` считать историческими и не использовать как рабочий контур.
+
+Проверено 2026-07-23:
+
+- новый личный VibeCode API-ключ отвечает на `GET /v1/me`, относится к `vibecode01.bitrix24.ru`, имеет режим `READWRITE` и scopes, необходимые для проекта (`crm`, `disk`, `placement`, `vibe:infra` и др.);
+- первичная проверка нового портала сначала вернула пустые списки `GET /v1/infra/servers` и `GET /v1/apps`; после включения триала/подписки и ручного создания BlackHole-сервера рабочий контур поднят на `e95ca529-f434-4432-bbb8-a7e0e8f85837`;
+- до включения триала/подписки создание/деплой VibeCode-серверов были заблокированы capability-gate: `servers.create.available=false`, `servers.deploy.available=false`, причина `MARKETPLACE_REQUIRED`; для новых порталов проверять это через `GET /v1/me` и админку `https://vibecode01.bitrix24.ru/settings/license/`;
+- после включения пользователем 15-дневного доступа фактическое создание сервера через API прошло, но API показал неожиданный `monthlyCost="2000"` у общего galaxy-хоста; по просьбе пользователя контур удалён полностью, контрольный `GET /v1/infra/servers` вернул пустой список;
+- перед следующим созданием сервера обязательно сверить биллинг/админку и не продолжать деплой, если API показывает неожиданный `monthlyCost` у galaxy-хоста;
+- пользователь вручную создал сервер BlackHole: `e95ca529-f434-4432-bbb8-a7e0e8f85837`, appUrl `https://app-5670766a17c1.vibecode.bitrix24.tech`, `STANDALONE`, `bc-micro`, monthlyCost `"600"`, `OWNER_ONLY`;
+- приложение задеплоено на этот сервер через Deploy API: `serviceName=app`, `status=running`, healthcheck/tunnel routing прошли, `GET /api/health` через временный access-token вернул `{"status":"ok"}`, `/` отдаёт React HTML;
+- metadata карточки обновлена: `displayName="Garment Print Constructor"`, `description="MVP order constructor for garment print deals in Bitrix24"`;
+- выпущен нормальный OAuth/VibeCode app key через `POST /v1/apps` для `vibecode01`: app id `2f3c0ba9-4253-4da4-9aaa-6a9ee4bb4e61`, scopes `crm`, `disk`, `placement`, `user`, appUrl текущего сервера; сырой `vibe_app_...` ключ не записан в документы;
+- в "Общем диске" создана/переиспользована папка "Макеты конструктора": `VIBE_LAYOUT_FOLDER_ID=90`;
+- сервер передеплоен с `VIBE_APP_KEY=<vibe_app_...>` и `VIBE_LAYOUT_FOLDER_ID=90`; через `POST /v1/infra/servers/:id/exec` подтверждено: `systemctl is-active app` -> `active`, `/opt/app/.env` содержит нужные переменные без раскрытия ключа, локальный `curl http://localhost:3000/api/health` и внешний `GET /api/health` через временный access-token вернули `{"status":"ok"}`;
+- если Marketplace/VibeCode-подписки нет и сервер нужно выбирать вручную среди платных тарифов, использовать **`bc-micro`** как минимальный практичный вариант для проекта; старый бесплатный shared-контур примерно на 500 MB RAM больше не считать гарантированно доступным;
+- проверка UF-полей сделок через `GET /v1/userfields/deals` пока заблокирована ответом `403 BITRIX_ACCESS_DENIED: REST is available only by subscription.`;
+- GitHub remote `origin` указывает на `https://github.com/DjjoniiL/Project-AI-GIT.git`; чтение веток и `git push --dry-run origin main` проходят.
+
+Секреты (`vibe_api_...`, `vibe_app_...`) не фиксировать в README, спецификации, коде и коммитах. Для нового контура их хранить только в `.env`/секретах платформы.
+
 ## Цель проекта
 
 Разработать MVP веб-конструктора для оформления заказов на печать одежды (футболки, худи, свитшоты и т.д.) с возможностью загрузки макета, выбора параметров изделия (тип, ткань, цвет, размеры) и комментария. Приложение должно быть встроено в карточку сделки Битрикс24 через виджет (iframe) и обмениваться данными через REST API Битрикс24, создавая или обновляя сделку с заполненными пользовательскими полями и прикреплёнными файлами макетов. 
@@ -98,10 +121,10 @@ https://vibecode.bitrix24.tech/docs/quickstart
 - ✅ Этап 0 (монорепозиторий, стек, UF-поля зафиксированы как список) — завершён.
 - ✅ **Этап 1 (Backend/BFF) — полностью завершён и проверен на живом портале Битрикс24 VibeCode** (не только код — реальный деплой):
   - Код: identity-middleware, `createOrUpdateDeal`, `uploadFileToDisk`, `POST /api/order` (`apps/backend/src`), 17 тестов.
-  - На портале `vibecode02.bitrix24.ru` созданы 11 UF-полей сделки, ключ `vibe_app_...`, папка на Диске под макеты.
-  - Бэкенд задеплоен на инфраструктуру VibeCode (режим `galaxyApp`) и отвечает на реальные запросы.
-  - Плейсмент `CRM_DEAL_DETAIL_TAB` привязан к приложению — вкладка технически уже встроена в карточку сделки.
-  - Puppeteer/headless Chromium эмпирически подтверждён рабочим в лимите контейнера (512 МБ RAM) — реальный PDF-экспорт через бэкенд возможен, запасной вариант (`pdf-lib`) не понадобился.
+  - На старом портале `vibecode02.bitrix24.ru` были созданы 11 UF-полей сделки, ключ `vibe_app_...`, папка на Диске под макеты; для нового `vibecode01.bitrix24.ru` актуально: app id `2f3c0ba9-4253-4da4-9aaa-6a9ee4bb4e61`, папка Диска `90`, сервер `e95ca529-f434-4432-bbb8-a7e0e8f85837`.
+  - Бэкенд и фронтенд задеплоены на актуальный VibeCode BlackHole `STANDALONE`/`bc-micro` сервер и отвечают на реальные запросы.
+  - Плейсмент `CRM_DEAL_DETAIL_TAB` был привязан на старом портале; для нового `vibecode01` его нужно привязать заново к app id `2f3c0ba9-4253-4da4-9aaa-6a9ee4bb4e61`.
+  - Puppeteer/headless Chromium подготовлен на новом сервере через `/exec` установкой системных библиотек — реальный PDF-экспорт через бэкенд возможен, запасной вариант (`pdf-lib`) не понадобился.
   - ✅ **Эндпоинт `POST /api/order-pdf` реализован** (`apps/backend/src/{services/orderPdf.ts, routes/orderPdf.ts}`) — HTML-шаблон бланка заказа рендерится в PDF через Puppeteer, под тем же identity-middleware, что и `/api/order`. 9 тестов (шаблон + роут на моках), плюс реальный ручной прогон: Puppeteer + локальный Chrome отрендерили PDF, кириллица подтверждена через `pdfjs-dist`.
   - ✅ **Фронтенд собран и раздаётся тем же Express-сервером** — `apps/backend/src/app.ts` теперь отдаёт `apps/frontend/dist` через `express.static` + SPA-фолбэк. Живой сервер редеплоен с обновлённым бэкендом и собранным фронтендом в одном архиве; подтверждено прямыми HTTP-запросами через временный access-token: `/` и SPA-путь с query-параметрами плейсмента отдают React-приложение, `/api/health`/`/api/order-pdf` отвечают корректно.
 - ✅ **Этап 2 (Frontend) — полностью завершён и задеплоен** (`apps/frontend/src`): весь UI из макета перенесён в React-компоненты на Ant Design + Redux Toolkit (карточки выбора, SVG-превью с живым наложением загруженного макета, отправка формы на бэкенд), 22 теста, проверено вручную в браузере и на живом сервере.
