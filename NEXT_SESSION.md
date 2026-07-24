@@ -1,5 +1,12 @@
 # Точка продолжения работы — читать в начале новой сессии
 
+## Актуализация 2026-07-24 — локальная проверка перед Этапом 3
+
+- Локальные проверки выполнены вне sandbox Windows, потому что внутри sandbox Vitest/Vite падают на `spawn EPERM` при запуске дочерних node-процессов. `npm test` проходит: backend 26 тестов, frontend 22 теста, shared-types 2 теста. `npm run build` проходит; остаётся только штатное предупреждение Vite о крупном JS chunk.
+- В `packages/shared-types` исключены `src/**/*.test.ts` из `tsc`-сборки, а test-скрипт ограничен `vitest run src`, чтобы после build пакет не выпускал `dist/index.test.js` и тесты не прогоняли скомпилированные копии.
+- В `apps/frontend/src/features/order/exportOrderPdf.test.ts` замокан `HTMLAnchorElement.prototype.click`, чтобы jsdom не шумел ошибкой `Not implemented: navigation` при тестировании автоскачивания PDF.
+- Важное блокирующее наблюдение перед живым Этапом 3: текущий локальный `.env` содержит `VIBE_APP_KEY`, который `GET /v1/me` определяет как `type="oauth_app"`, `portal="vibecode02.bitrix24.ru"`, scopes `crm,disk,placement`. Это старый портал. Этим ключом нельзя привязывать placement/UF-поля для актуального `vibecode01`. Перед продолжением живых операций нужно заменить локальный `.env` на актуальный ключ нового app id `2f3c0ba9-4253-4da4-9aaa-6a9ee4bb4e61` или передать актуальный ключ одноразово в окружение команды; секреты не записывать в репозиторий.
+
 ## Актуализация 2026-07-23 — новый тестовый портал
 
 - Актуальный тестовый портал теперь **`vibecode01.bitrix24.ru`**. Все упоминания `vibecode02.bitrix24.ru`, старого `vibe_app_...`, server id `801496ff-f700-4dd0-9bec-571adbc7efcb` и appUrl `https://app-2a2f90ace69d.vibecode.bitrix24.tech` ниже считать историческим контекстом предыдущего портала, а не рабочей инфраструктурой.
