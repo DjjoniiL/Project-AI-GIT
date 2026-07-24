@@ -19,11 +19,11 @@ export function OptionsCard() {
       <Typography.Text
         type="secondary"
         id="options-label"
-        style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
+        style={{ display: 'block', marginBottom: 5, fontSize: 12 }}
       >
         Дополнительные опции
       </Typography.Text>
-      <div role="group" aria-labelledby="options-label" style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+      <div role="group" aria-labelledby="options-label" style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px' }}>
         {visibleOptions.map((option) => (
           <Checkbox
             key={option}
@@ -35,7 +35,7 @@ export function OptionsCard() {
         ))}
       </div>
       {allowed.includes('pocket') && allowed.includes('zip') && (
-        <Typography.Paragraph type="secondary" style={{ fontSize: 12, margin: '8px 0 0' }}>
+        <Typography.Paragraph type="secondary" style={{ fontSize: 11, margin: '5px 0 0' }}>
           При выборе кармана и молнии — кармана будет два.
         </Typography.Paragraph>
       )}

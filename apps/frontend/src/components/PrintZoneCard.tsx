@@ -12,22 +12,22 @@ export function PrintZoneCard() {
 
   return (
     <Card size="small">
-      <Typography.Text type="secondary" id="zone-label" style={{ display: 'block', marginBottom: 8, fontSize: 13 }}>
+      <Typography.Text type="secondary" id="zone-label" style={{ display: 'block', marginBottom: 5, fontSize: 12 }}>
         Зона размещения принта
       </Typography.Text>
       <Radio.Group
         value={printZone}
         onChange={(e) => dispatch(setPrintZone(e.target.value as PrintZone))}
-        style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, width: '100%' }}
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5, width: '100%' }}
         aria-labelledby="zone-label"
       >
         {ZONES.map(([value, label]) => (
-          <Radio.Button key={value} value={value} style={{ textAlign: 'center', fontSize: 11, padding: '10px 3px' }}>
+          <Radio.Button key={value} value={value} style={{ textAlign: 'center', fontSize: 11, padding: '6px 3px' }}>
             {label}
           </Radio.Button>
         ))}
       </Radio.Group>
-      <Typography.Paragraph type="secondary" style={{ fontSize: 12, margin: '8px 0 0' }}>
+      <Typography.Paragraph type="secondary" style={{ fontSize: 11, margin: '5px 0 0' }}>
         Пунктир на превью — граница зоны печати.
       </Typography.Paragraph>
     </Card>

@@ -28,7 +28,7 @@ export function ExportPdfButton({ layoutFile }: ExportPdfButtonProps) {
       <Button icon={<DownloadOutlined />} block onClick={handleExport} loading={exporting}>
         Скачать файл заказа в PDF
       </Button>
-      <Typography.Paragraph type="secondary" style={{ fontSize: 12, margin: '4px 0 0' }}>
+      <Typography.Paragraph type="secondary" style={{ fontSize: 11, margin: '3px 0 0' }}>
         Сводная спецификация: параметры заказа и файл макета.
       </Typography.Paragraph>
       {error && (

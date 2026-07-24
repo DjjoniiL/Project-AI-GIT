@@ -22,18 +22,18 @@ export function SizesCard() {
           alignItems: 'center',
           gap: 8,
           flexWrap: 'wrap',
-          marginBottom: 8,
+          marginBottom: 5,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Typography.Text type="secondary" id="sizes-label" style={{ fontSize: 13 }}>
+          <Typography.Text type="secondary" id="sizes-label" style={{ fontSize: 12 }}>
             Размеры и количество
           </Typography.Text>
           <a onClick={() => setChartOpen(true)} style={{ fontSize: 11 }}>
             Таблица размеров
           </a>
         </div>
-        <Typography.Text strong style={{ fontSize: 13 }} aria-live="polite">
+        <Typography.Text strong style={{ fontSize: 12 }} aria-live="polite">
           Итого: {total} шт.
         </Typography.Text>
       </div>
@@ -41,10 +41,10 @@ export function SizesCard() {
       <div
         role="group"
         aria-labelledby="sizes-label"
-        style={{ display: 'grid', gridTemplateColumns: `repeat(${SIZES.length}, 1fr)`, gap: 4 }}
+        style={{ display: 'grid', gridTemplateColumns: `repeat(${SIZES.length}, 1fr)`, gap: 3 }}
       >
         {SIZES.map((size) => (
-          <div key={size} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+          <div key={size} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
             <label htmlFor={`qty-${size}`} style={{ fontSize: 11, color: 'var(--ant-color-text-tertiary)' }}>
               {size}
             </label>

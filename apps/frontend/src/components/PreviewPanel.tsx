@@ -76,7 +76,7 @@ export function PreviewPanel({ layoutFile }: PreviewPanelProps) {
   const splitPocket = showPocket && showZip;
 
   return (
-    <div style={{ background: 'var(--ant-color-bg-elevated)', borderRadius: 12, padding: 16 }}>
+    <div style={{ background: 'var(--ant-color-bg-elevated)', borderRadius: 8, padding: 8, minHeight: 0 }}>
       <Segmented
         block
         value={view}
@@ -85,13 +85,19 @@ export function PreviewPanel({ layoutFile }: PreviewPanelProps) {
           { label: 'Вид спереди', value: 'front' },
           { label: 'Вид со спины', value: 'back' },
         ]}
-        style={{ marginBottom: 12 }}
+        style={{ marginBottom: 6 }}
       />
 
       <svg
         viewBox="0 18 240 368"
         role="img"
-        style={{ width: '100%', height: 'auto', display: 'block', opacity: isHoodie ? 1 : 0.35, transition: 'opacity .15s' }}
+        style={{
+          width: '100%',
+          height: 'clamp(230px, calc(100vh - 144px), 440px)',
+          display: 'block',
+          opacity: isHoodie ? 1 : 0.35,
+          transition: 'opacity .15s',
+        }}
       >
         <title>Схематичное превью изделия</title>
         <g transform="scale(1,1.36)">

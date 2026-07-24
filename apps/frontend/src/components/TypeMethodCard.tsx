@@ -14,7 +14,7 @@ export function TypeMethodCard() {
 
   return (
     <Card size="small">
-      <Typography.Text type="secondary" id="type-label" style={{ display: 'block', marginBottom: 8, fontSize: 13 }}>
+      <Typography.Text type="secondary" id="type-label" style={{ display: 'block', marginBottom: 5, fontSize: 12 }}>
         Тип изделия
       </Typography.Text>
       <Radio.Group
@@ -23,26 +23,26 @@ export function TypeMethodCard() {
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(72px, 1fr))',
-          gap: 8,
+          gap: 5,
           width: '100%',
-          marginBottom: 16,
+          marginBottom: 8,
         }}
         aria-labelledby="type-label"
       >
         {PRODUCT_TYPES.map(([value, label]) => (
-          <Radio.Button key={value} value={value} style={{ textAlign: 'center', height: 'auto', padding: '10px 4px' }}>
+          <Radio.Button key={value} value={value} style={{ textAlign: 'center', height: 'auto', padding: '6px 3px' }}>
             <span style={{ fontSize: 11 }}>{label}</span>
           </Radio.Button>
         ))}
       </Radio.Group>
 
-      <Typography.Text type="secondary" id="method-label" style={{ display: 'block', marginBottom: 8, fontSize: 13 }}>
+      <Typography.Text type="secondary" id="method-label" style={{ display: 'block', marginBottom: 5, fontSize: 12 }}>
         Способ нанесения принта
       </Typography.Text>
       <Radio.Group
         value={printMethod}
         onChange={(e) => dispatch(setPrintMethod(e.target.value as PrintMethod))}
-        style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, width: '100%' }}
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 5, width: '100%' }}
         aria-labelledby="method-label"
       >
         {PRINT_METHODS.map(([value, label]) => (

@@ -18,29 +18,32 @@ function App() {
   const [layoutFile, setLayoutFile] = useState<File | null>(null);
 
   return (
-    <main style={{ padding: '1rem', maxWidth: 960, margin: '0 auto' }}>
+    <main className="constructor-shell">
       <h2 style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
         Конструктор заказов одежды с принтом
       </h2>
       <DealBanner dealId={dealId} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+      <div className="constructor-grid">
+        <section className="constructor-column">
           <FabricCareCard />
           <ColorCard />
-          <OptionsCard />
           <LayoutUploadCard layoutFile={layoutFile} onChange={setLayoutFile} />
-          <SizesCard />
           <CommentCard />
-          <SubmitSection dealId={dealId} layoutFile={layoutFile} />
-        </div>
+        </section>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0, position: 'sticky', top: 0 }}>
-          <PreviewPanel layoutFile={layoutFile} />
-          <PrintZoneCard />
+        <section className="constructor-column">
           <TypeMethodCard />
+          <PrintZoneCard />
+          <OptionsCard />
+          <SizesCard />
+          <SubmitSection dealId={dealId} layoutFile={layoutFile} />
+        </section>
+
+        <section className="constructor-preview-column">
+          <PreviewPanel layoutFile={layoutFile} />
           <ExportPdfButton layoutFile={layoutFile} />
-        </div>
+        </section>
       </div>
     </main>
   );

@@ -30,7 +30,7 @@ export function SubmitSection({ dealId, layoutFile }: SubmitSectionProps) {
       <Button type="primary" block onClick={handleSubmit} loading={submitting}>
         Отправить в сделку
       </Button>
-      <Typography.Paragraph type="secondary" style={{ fontSize: 12, margin: '4px 0 0' }}>
+      <Typography.Paragraph type="secondary" style={{ fontSize: 11, margin: '3px 0 0' }}>
         Создаст сделку в Битрикс24 (или обновит текущую) и прикрепит макет.
       </Typography.Paragraph>
       {result && (

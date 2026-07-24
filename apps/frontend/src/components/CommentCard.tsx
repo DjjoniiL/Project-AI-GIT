@@ -10,13 +10,13 @@ export function CommentCard() {
     <Card size="small">
       <label
         htmlFor="comment"
-        style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'var(--ant-color-text-secondary)' }}
+        style={{ display: 'block', marginBottom: 5, fontSize: 12, color: 'var(--ant-color-text-secondary)' }}
       >
         Комментарий
       </label>
       <Input.TextArea
         id="comment"
-        rows={2}
+        rows={1}
         value={comment}
         onChange={(e) => dispatch(setComment(e.target.value))}
         placeholder="Пожелания по печати, отделке или комплектации"

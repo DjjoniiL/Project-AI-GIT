@@ -11,8 +11,8 @@ export function DealBanner({ dealId }: DealBannerProps) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: '1rem',
-        padding: '10px 14px',
+        marginBottom: 8,
+        padding: '7px 10px',
         background: 'var(--ant-color-primary-bg)',
         borderRadius: 'var(--ant-border-radius)',
       }}

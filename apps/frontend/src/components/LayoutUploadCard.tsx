@@ -77,8 +77,8 @@ export function LayoutUploadCard({ layoutFile, onChange }: LayoutUploadCardProps
   }
 
   return (
-    <Card size="small" styles={{ body: { padding: '12px 16px' } }}>
-      <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 6, fontSize: 13 }}>
+    <Card size="small">
+      <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 5, fontSize: 12 }}>
         Макет принта
       </Typography.Text>
 
@@ -88,7 +88,7 @@ export function LayoutUploadCard({ layoutFile, onChange }: LayoutUploadCardProps
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            padding: '8px 10px',
+            padding: '6px 8px',
             background: 'var(--ant-color-fill-tertiary)',
             borderRadius: 'var(--ant-border-radius)',
           }}
@@ -116,7 +116,7 @@ export function LayoutUploadCard({ layoutFile, onChange }: LayoutUploadCardProps
           <p className="ant-upload-drag-icon">
             <InboxOutlined />
           </p>
-          <p style={{ fontSize: 12, margin: '4px 0 2px' }}>Перетащите файл или выберите на компьютере</p>
+          <p style={{ fontSize: 12, margin: '2px 0 1px' }}>Перетащите файл или выберите на компьютере</p>
           <p style={{ fontSize: 11, color: 'var(--ant-color-text-secondary)', margin: 0 }}>
             .png, .jpg, .pdf, .ai, .eps — до 52 МБ
           </p>

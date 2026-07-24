@@ -10,15 +10,15 @@ export function ColorCard() {
 
   return (
     <Card size="small">
-      <Row gutter={16}>
+      <Row gutter={10}>
         <Col span={12}>
-          <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8, fontSize: 13 }}>
+          <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 5, fontSize: 12 }}>
             Основной цвет
           </Typography.Text>
           <ColorSwatchGroup value={bodyColor} onChange={(v) => dispatch(setBodyColor(v))} label="Основной цвет" />
         </Col>
         <Col span={12}>
-          <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8, fontSize: 13 }}>
+          <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 5, fontSize: 12 }}>
             Цвет отделки
           </Typography.Text>
           <ColorSwatchGroup value={trimColor} onChange={(v) => dispatch(setTrimColor(v))} label="Цвет отделки" />
