@@ -38,7 +38,7 @@ export interface OrderFormData {
 
 /**
  * Маппинг полей формы на пользовательские поля сделки Битрикс24 (UF_CRM_*).
- * Коды подтверждены живыми полями, созданными на портале (specification.md, раздел 6).
+ * Коды подтверждены живыми полями на актуальном портале (specification.md, раздел 6).
  */
 export const UF_FIELD_MAP: Record<keyof OrderFormData, string> = {
   productType: 'UF_CRM_PRODUCT_TYPE',

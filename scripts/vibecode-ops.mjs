@@ -85,22 +85,29 @@ async function request({ method = 'GET', path, apiKey, authorization, body }) {
   return payload.data;
 }
 
-async function checkAppKey() {
+async function checkApiKey({ apiKey, label, requireApp = false }) {
   const config = getConfig();
-  if (!config.appKey) {
-    throw new Error('VIBE_APP_KEY is required');
+  if (!apiKey) {
+    throw new Error(`${label} is required`);
   }
 
-  const me = await request({ path: '/v1/me', apiKey: config.appKey });
+  const me = await request({ path: '/v1/me', apiKey });
   const portal = String(me.portal ?? '');
   if (portal !== config.expectedPortal) {
     throw new Error(
-      `VIBE_APP_KEY belongs to ${portal}, expected ${config.expectedPortal}. Refusing to change portal data.`,
+      `${label} belongs to ${portal}, expected ${config.expectedPortal}. Refusing to change portal data.`,
     );
   }
+  if (requireApp && me.type !== 'oauth_app') {
+    throw new Error(`${label} must be an OAuth app key for this operation, got ${me.type}`);
+  }
 
-  console.log(`App key OK: portal=${portal}, type=${me.type}, scopes=${(me.scopes ?? []).join(',')}`);
+  console.log(`${label} OK: portal=${portal}, type=${me.type}, scopes=${(me.scopes ?? []).join(',')}`);
   return me;
+}
+
+async function checkAppKey() {
+  return checkApiKey({ apiKey: getConfig().appKey, label: 'VIBE_APP_KEY', requireApp: true });
 }
 
 function normalizeUserfieldCode(field) {
@@ -124,13 +131,23 @@ function asArray(data) {
   return [];
 }
 
+function normalizeAvailablePlacements(data) {
+  const direct = asArray(data);
+  if (direct.length > 0) return direct;
+
+  const groups = data?.groups;
+  if (!groups || typeof groups !== 'object') return [];
+  return Object.values(groups).flatMap((items) => (Array.isArray(items) ? items : []));
+}
+
 async function ensureUserFields() {
   const config = getConfig();
-  await checkAppKey();
+  const apiKey = config.personalApiKey || config.appKey;
+  await checkApiKey({ apiKey, label: config.personalApiKey ? 'VIBE_PERSONAL_API_KEY' : 'VIBE_APP_KEY' });
 
   let existingFields = [];
   try {
-    existingFields = asArray(await request({ path: '/v1/userfields/deals', apiKey: config.appKey }));
+    existingFields = asArray(await request({ path: '/v1/userfields/deals', apiKey }));
   } catch (error) {
     if (error instanceof ApiError) {
       console.error(`Cannot read deal UF fields: ${error.status} ${error.code} ${error.message}`);
@@ -149,7 +166,7 @@ async function ensureUserFields() {
     await request({
       method: 'POST',
       path: '/v1/userfields/deals',
-      apiKey: config.appKey,
+      apiKey,
       body: {
         userTypeId: field.userTypeId,
         fieldName: field.fieldName,
@@ -164,8 +181,8 @@ async function bindPlacement() {
   const config = getConfig();
   await checkAppKey();
 
-  const available = asArray(
-    await request({ path: '/v1/placements/available', apiKey: config.appKey }),
+  const available = normalizeAvailablePlacements(
+    await request({ path: '/v1/placements/available', apiKey: config.personalApiKey || config.appKey }),
   );
   const hasDealTab = available.some((item) => {
     if (typeof item === 'string') return item === 'CRM_DEAL_DETAIL_TAB';
