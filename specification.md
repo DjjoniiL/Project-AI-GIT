@@ -5,6 +5,8 @@
 - Локально подтверждено: `npm test` проходит полностью (backend 26, frontend 22, shared-types 2 теста), `npm run build` проходит. Запускать эти команды из текущего Codex/sandbox окружения нужно вне sandbox Windows, иначе Vitest/Vite получают `spawn EPERM` на дочерних процессах.
 - `packages/shared-types` больше не компилирует `src/**/*.test.ts` в `dist`; test-скрипт пакета ограничен исходниками (`vitest run src`). Это убирает риск прогонов скомпилированных копий тестов и не кладёт тестовые файлы в пакетный build.
 - Перед живым продолжением Этапа 3 обнаружено, что текущий локальный `.env` содержит `VIBE_APP_KEY` старого портала `vibecode02.bitrix24.ru`. Для `vibecode01` нельзя выполнять `placements/bind`, проверку/создание UF-полей и другие живые операции, пока локальный env не заменён на актуальный ключ нового app id `2f3c0ba9-4253-4da4-9aaa-6a9ee4bb4e61` или актуальный ключ не передан одноразово в окружение команды. Секреты в документацию не записывать.
+- Добавлен операционный скрипт `scripts/vibecode-ops.mjs` для Этапа 3: `vibecode:check-server`, `vibecode:ensure-fields`, `vibecode:bind-placement`, `vibecode:setup-portal`. Скрипт idempotent по UF-полям, сначала сверяет портал ключа через `/v1/me`, затем создаёт недостающие поля и привязывает `CRM_DEAL_DETAIL_TAB`. При текущем старом ключе он безопасно отказывается выполнять изменения.
+- Проверка опубликованного owner-only URL без bearer-token возвращает ожидаемый `401 BH_LOGIN_REQUIRED`, что подтверждает живой BlackHole gateway. Полная проверка server health через временный access-token требует личный `VIBE_PERSONAL_API_KEY` актуального `vibecode01`.
 
 ## Актуализация контура 2026-07-23
 

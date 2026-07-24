@@ -13,7 +13,11 @@
     "build": "npm run build --workspace packages/shared-types && npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "vibecode:check-server": "node scripts/vibecode-ops.mjs check-server",
+    "vibecode:ensure-fields": "node scripts/vibecode-ops.mjs ensure-fields",
+    "vibecode:bind-placement": "node scripts/vibecode-ops.mjs bind-placement",
+    "vibecode:setup-portal": "node scripts/vibecode-ops.mjs setup-portal"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

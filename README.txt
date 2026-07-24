@@ -26,6 +26,14 @@
 Актуализация 2026-07-24: при локальной проверке `.env` текущий `VIBE_APP_KEY` оказался ключом старого портала `vibecode02.bitrix24.ru`. Для живых операций Этапа 3 на `vibecode01` локальный ключ нужно заменить на актуальный ключ нового app id `2f3c0ba9-4253-4da4-9aaa-6a9ee4bb4e61` или передать его одноразово через окружение команды. Этим старым ключом не выполнять `placements/bind` и операции с UF-полями нового портала.
 
 Техническая чистка 2026-07-24: `packages/shared-types` больше не компилирует тесты в `dist`, test-скрипт пакета запускает только `src`, а тест PDF-экспорта мокает клик по download-ссылке, чтобы jsdom не выдавал шумную ошибку навигации. `npm test` и `npm run build` проходят вне sandbox Windows.
+
+Для продолжения живого Этапа 3 добавлены команды:
+- `npm run vibecode:check-server` — проверяет опубликованный BlackHole URL; без `VIBE_PERSONAL_API_KEY` ожидаемо показывает owner-only `BH_LOGIN_REQUIRED`, с личным ключом минтит временный bearer-token и проверяет `/api/health` + SPA.
+- `npm run vibecode:ensure-fields` — создаёт недостающие UF-поля сделок.
+- `npm run vibecode:bind-placement` — привязывает `CRM_DEAL_DETAIL_TAB`.
+- `npm run vibecode:setup-portal` — выполняет UF-поля + placement одним запуском.
+
+Все setup-команды сначала сверяют `VIBE_APP_KEY` через `/v1/me` и отказываются менять портал, если ключ не относится к `VIBE_EXPECTED_PORTAL` (`vibecode01.bitrix24.ru` по умолчанию).
  
 ## Цель проекта
 
@@ -157,4 +165,6 @@ https://vibecode.bitrix24.tech/docs/quickstart
 - `npm run build` — собрать все workspace (важен порядок: `packages/shared-types` собирается первым, от него зависит `apps/backend`).
 - `npm test` — прогнать тесты всех workspace (Vitest).
 - `npm run lint` — проверить весь монорепозиторий ESLint.
+- `npm run vibecode:check-server` — проверить живой BlackHole URL; полная owner-only проверка требует `VIBE_PERSONAL_API_KEY`.
+- `npm run vibecode:setup-portal` — создать UF-поля и привязать placement на актуальном портале после установки правильного `VIBE_APP_KEY`.
 - Секреты — скопировать `.env.example` в `.env` и заполнить: `VIBE_APP_KEY` (ключ приложения VibeCode), `VIBE_LAYOUT_FOLDER_ID` (папка на Диске для макетов), `VIBE_API_BASE_URL` (опционально). Файл `.env` не коммитится.
