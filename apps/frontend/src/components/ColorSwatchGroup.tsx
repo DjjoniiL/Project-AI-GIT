@@ -9,6 +9,8 @@ interface ColorSwatchGroupProps {
 
 export function ColorSwatchGroup({ value, onChange, label }: ColorSwatchGroupProps) {
   const isPreset = COLOR_SWATCHES.some((swatch) => swatch.value === value);
+  const baseRing = '0 0 0 1px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.55)';
+  const activeRing = '0 0 0 2px var(--ant-color-primary), 0 0 0 4px var(--ant-color-bg-container), 0 0 0 5px rgba(0,0,0,.34)';
 
   return (
     <div role="radiogroup" aria-label={label} style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -24,16 +26,14 @@ export function ColorSwatchGroup({ value, onChange, label }: ColorSwatchGroupPro
             title={swatch.label}
             onClick={() => onChange(swatch.value)}
             style={{
-              width: 24,
-              height: 24,
+              width: 26,
+              height: 26,
               borderRadius: '50%',
               padding: 0,
               cursor: 'pointer',
               background: swatch.value,
               border: 'none',
-              boxShadow: checked
-                ? 'inset 0 0 0 2px var(--ant-color-primary)'
-                : 'inset 0 0 0 1px var(--ant-color-border)',
+              boxShadow: checked ? activeRing : baseRing,
             }}
           />
         );
@@ -44,15 +44,13 @@ export function ColorSwatchGroup({ value, onChange, label }: ColorSwatchGroupPro
           aria-label={`Свой цвет — ${label}`}
           title="Свой цвет"
           style={{
-            width: 24,
-            height: 24,
+            width: 26,
+            height: 26,
             borderRadius: '50%',
             border: 'none',
             cursor: 'pointer',
             background: !isPreset ? value : 'var(--ant-color-fill-secondary)',
-            boxShadow: !isPreset
-              ? 'inset 0 0 0 2px var(--ant-color-primary)'
-              : 'inset 0 0 0 1px var(--ant-color-border)',
+            boxShadow: !isPreset ? activeRing : baseRing,
           }}
         />
       </ColorPicker>

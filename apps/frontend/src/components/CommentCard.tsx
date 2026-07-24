@@ -16,7 +16,7 @@ export function CommentCard() {
       </label>
       <Input.TextArea
         id="comment"
-        rows={1}
+        rows={2}
         value={comment}
         onChange={(e) => dispatch(setComment(e.target.value))}
         placeholder="Пожелания по печати, отделке или комплектации"

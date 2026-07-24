@@ -20,5 +20,5 @@ export const ZONES: Record<PrintZone, ZoneRect> = {
 const LIGHT_BODY_COLORS = ['#ffffff', '#f3c9d3'];
 
 export function zoneOutlineColor(bodyColor: string): string {
-  return LIGHT_BODY_COLORS.includes(bodyColor.toLowerCase()) ? 'var(--ant-color-border-secondary)' : '#ffffff';
+  return LIGHT_BODY_COLORS.includes(bodyColor.toLowerCase()) ? '#4a4a4a' : '#ffffff';
 }

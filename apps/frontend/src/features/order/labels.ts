@@ -15,7 +15,7 @@ export const COLOR_SWATCHES: Array<{ value: string; label: string }> = [
   { value: '#f3c9d3', label: 'Бледно-розовый' },
   { value: '#ffffff', label: 'Белый' },
   { value: '#1a1a1a', label: 'Чёрный' },
-  { value: '#8a8a8a', label: 'Серый' },
+  { value: '#6f6f6f', label: 'Серый' },
   { value: '#7a1f1f', label: 'Тёмно-красный' },
   { value: '#1f9e96', label: 'Бирюзовый' },
   { value: '#f2c200', label: 'Ярко-жёлтый' },

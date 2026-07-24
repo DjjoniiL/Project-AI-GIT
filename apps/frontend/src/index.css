@@ -29,7 +29,7 @@ body {
 
 .constructor-grid {
   display: grid;
-  grid-template-columns: minmax(270px, 0.95fr) minmax(300px, 1.05fr) minmax(240px, 0.78fr);
+  grid-template-columns: minmax(300px, 0.95fr) minmax(270px, 0.78fr) minmax(320px, 1.05fr);
   gap: 8px;
   align-items: stretch;
   height: calc(100% - 40px);
@@ -46,7 +46,21 @@ body {
 }
 
 .constructor-preview-column {
+  align-items: center;
   justify-content: flex-start;
+}
+
+.preview-panel {
+  width: 100%;
+  min-height: 0;
+  padding: 8px;
+  border-radius: 4px;
+  background: var(--ant-color-bg-elevated);
+}
+
+.preview-panel svg {
+  max-width: 430px;
+  margin: 0 auto;
 }
 
 .constructor-shell .ant-card-small > .ant-card-body {
@@ -58,11 +72,67 @@ body {
 }
 
 .constructor-shell .ant-radio-button-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
+  height: 30px;
+  padding: 0 8px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: normal;
   line-height: 1.15;
+  border-radius: 2px !important;
+  border-start-start-radius: 2px !important;
+  border-start-end-radius: 2px !important;
+  border-end-start-radius: 2px !important;
+  border-end-end-radius: 2px !important;
+}
+
+.constructor-shell .ant-radio-button-wrapper:first-child,
+.constructor-shell .ant-radio-button-wrapper:last-child {
+  border-radius: 2px !important;
+  border-start-start-radius: 2px !important;
+  border-start-end-radius: 2px !important;
+  border-end-start-radius: 2px !important;
+  border-end-end-radius: 2px !important;
+}
+
+.constructor-shell .ant-radio-button-wrapper > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+}
+
+.constructor-shell .ant-btn,
+.constructor-shell .ant-segmented,
+.constructor-shell .ant-input,
+.constructor-shell .ant-input-number,
+.constructor-shell .ant-select-selector {
+  border-radius: 3px !important;
+}
+
+.constructor-shell .ant-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px !important;
+}
+
+.constructor-shell .ant-segmented {
+  padding: 2px;
+}
+
+.constructor-shell .ant-segmented-item {
+  border-radius: 3px;
+}
+
+.constructor-shell .ant-checkbox-wrapper {
+  align-items: center;
 }
 
 .constructor-shell .ant-upload-wrapper .ant-upload-drag {

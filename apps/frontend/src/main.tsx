@@ -13,9 +13,9 @@ createRoot(document.getElementById('root')!).render(
         theme={{
           algorithm: theme.compactAlgorithm,
           token: {
-            borderRadius: 6,
+            borderRadius: 4,
             fontSize: 13,
-            controlHeight: 28,
+            controlHeight: 30,
           },
         }}
       >

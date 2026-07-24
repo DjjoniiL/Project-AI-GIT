@@ -18,6 +18,17 @@ function extensionOf(filename: string): string {
   return filename.split('.').pop()?.toLowerCase() ?? '';
 }
 
+function silhouetteStrokeFor(color: string): string {
+  const hex = color.trim().replace('#', '');
+  if (!/^[0-9a-f]{6}$/i.test(hex)) return 'var(--ant-color-border)';
+
+  const r = Number.parseInt(hex.slice(0, 2), 16);
+  const g = Number.parseInt(hex.slice(2, 4), 16);
+  const b = Number.parseInt(hex.slice(4, 6), 16);
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return luminance > 0.72 ? '#666666' : 'rgba(255,255,255,.82)';
+}
+
 function ZoneOverlay({
   layoutFile,
   previewUrl,
@@ -68,6 +79,8 @@ export function PreviewPanel({ layoutFile }: PreviewPanelProps) {
   const zone = ZONES[printZone];
   const isHoodie = productType === 'hoodie';
   const outlineColor = zoneOutlineColor(bodyColor);
+  const bodyStroke = silhouetteStrokeFor(bodyColor);
+  const trimStroke = silhouetteStrokeFor(trimColor);
 
   const showHood = options.includes('hood');
   const showZip = options.includes('zip');
@@ -76,7 +89,7 @@ export function PreviewPanel({ layoutFile }: PreviewPanelProps) {
   const splitPocket = showPocket && showZip;
 
   return (
-    <div style={{ background: 'var(--ant-color-bg-elevated)', borderRadius: 8, padding: 8, minHeight: 0 }}>
+    <div className="preview-panel">
       <Segmented
         block
         value={view}
@@ -93,16 +106,16 @@ export function PreviewPanel({ layoutFile }: PreviewPanelProps) {
         role="img"
         style={{
           width: '100%',
-          height: 'clamp(230px, calc(100vh - 144px), 440px)',
+          height: 'clamp(220px, calc(100vh - 170px), 405px)',
           display: 'block',
           opacity: isHoodie ? 1 : 0.35,
           transition: 'opacity .15s',
         }}
       >
         <title>Схематичное превью изделия</title>
-        <g transform="scale(1,1.36)">
+        <g transform="translate(0,-10) scale(1,1.36)">
           <g style={{ display: view === 'front' ? undefined : 'none' }}>
-            <g fill={bodyColor} stroke="var(--ant-color-border-secondary)" strokeWidth={0.8}>
+            <g fill={bodyColor} stroke={bodyStroke} strokeWidth={0.65}>
               {BODY_PATHS.map((d) => (
                 <path key={d} d={d} />
               ))}
@@ -112,7 +125,7 @@ export function PreviewPanel({ layoutFile }: PreviewPanelProps) {
                 <ZoneOverlay layoutFile={layoutFile} previewUrl={previewUrl} x={zone.x} y={zone.y} w={zone.w} h={zone.h} />
               )}
             </g>
-            <g fill={trimColor} stroke="var(--ant-color-border-secondary)" strokeWidth={0.8}>
+            <g fill={trimColor} stroke={trimStroke} strokeWidth={0.65}>
               {showHood && <path d="M82,85 Q120,18 158,85 Q150,100 120,102 Q90,100 82,85 Z" />}
               {showPocket && !splitPocket && <rect x={95} y={203} width={50} height={34} rx={8} />}
               {splitPocket && (
@@ -147,7 +160,7 @@ export function PreviewPanel({ layoutFile }: PreviewPanelProps) {
           </g>
 
           <g style={{ display: view === 'back' ? undefined : 'none' }}>
-            <g fill={bodyColor} stroke="var(--ant-color-border-secondary)" strokeWidth={0.8}>
+            <g fill={bodyColor} stroke={bodyStroke} strokeWidth={0.65}>
               {BODY_PATHS.map((d) => (
                 <path key={d} d={d} />
               ))}
@@ -157,7 +170,7 @@ export function PreviewPanel({ layoutFile }: PreviewPanelProps) {
                 <ZoneOverlay layoutFile={layoutFile} previewUrl={previewUrl} x={zone.x} y={zone.y} w={zone.w} h={zone.h} />
               )}
             </g>
-            <g fill={trimColor} stroke="var(--ant-color-border-secondary)" strokeWidth={0.8}>
+            <g fill={trimColor} stroke={trimStroke} strokeWidth={0.65}>
               {showHood && <path d="M78,82 Q120,15 162,82 Q155,105 120,108 Q85,105 78,82 Z" />}
               {showTrimDetails && (
                 <g>

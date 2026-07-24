@@ -25,24 +25,24 @@ function App() {
       <DealBanner dealId={dealId} />
 
       <div className="constructor-grid">
-        <section className="constructor-column">
+        <section className="constructor-column constructor-left-column">
           <FabricCareCard />
           <ColorCard />
           <LayoutUploadCard layoutFile={layoutFile} onChange={setLayoutFile} />
           <CommentCard />
         </section>
 
-        <section className="constructor-column">
+        <section className="constructor-preview-column">
+          <PreviewPanel layoutFile={layoutFile} />
+          <ExportPdfButton layoutFile={layoutFile} />
+        </section>
+
+        <section className="constructor-column constructor-right-column">
           <TypeMethodCard />
           <PrintZoneCard />
           <OptionsCard />
           <SizesCard />
           <SubmitSection dealId={dealId} layoutFile={layoutFile} />
-        </section>
-
-        <section className="constructor-preview-column">
-          <PreviewPanel layoutFile={layoutFile} />
-          <ExportPdfButton layoutFile={layoutFile} />
         </section>
       </div>
     </main>
